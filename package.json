@@ -1,0 +1,56 @@
+{
+  "name": "palabro",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Aprender ingles de verdad: flashcards con produccion activa, repeticion espaciada FSRS y feedback con IA.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc -p tsconfig.worker.json && tsc -p tsconfig.client.json && tsc -p tsconfig.node.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "corpus:generate": "tsx corpus/generate.ts",
+    "corpus:validate": "tsx corpus/validate.ts",
+    "corpus:seed": "tsx corpus/seed.ts",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > src/shared/database.types.ts",
+    "cf:types": "wrangler types"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.58.0",
+    "@tanstack/react-query": "^5.90.0",
+    "@tanstack/react-router": "^1.132.0",
+    "hono": "^4.9.0",
+    "jose": "^6.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "ts-fsrs": "^5.2.0",
+    "zod": "^4.1.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.13.0",
+    "@cloudflare/workers-types": "^5.20260922.1",
+    "@playwright/test": "^1.56.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/node": "^22.20.4",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "tailwindcss": "^4.1.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0",
+    "vite-plugin-pwa": "^1.0.0",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.42.0"
+  }
+}

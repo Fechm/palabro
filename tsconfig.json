@@ -1,0 +1,11 @@
+{
+  // Cada entorno tiene tipos globales incompatibles (workerd vs Node vs
+  // navegador). Mezclarlos en un solo tsconfig produce errores falsos y
+  // esconde errores reales. `npm run typecheck` corre los tres.
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.worker.json" },
+    { "path": "./tsconfig.client.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+}

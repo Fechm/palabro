@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "palabro",
+  "main": "src/server/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // El mismo Worker sirve el front estatico y las rutas /api/*.
+  // Las peticiones a assets no se facturan.
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+
+  // Workers AI: fallback gratuito cuando Gemini falla o agota cuota.
+  "ai": { "binding": "AI" },
+
+  // 12:00 UTC = 09:00 en Chile (UTC-3). Recordatorio diario +
+  // keep-alive de Supabase (el plan free pausa el proyecto tras ~1 semana).
+  "triggers": { "crons": ["0 12 * * *"] },
+
+  "observability": { "enabled": true },
+
+  "vars": {
+    "ENVIRONMENT": "production"
+  }
+
+  // Los secretos NO van aqui. Se cargan con:
+  //   wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+  //   wrangler secret put SUPABASE_JWT_SECRET
+  //   wrangler secret put GEMINI_API_KEY
+  // En local se leen de .dev.vars (ignorado por git).
+}

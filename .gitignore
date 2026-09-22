@@ -1,0 +1,30 @@
+node_modules/
+dist/
+.wrangler/
+.vite/
+
+# Secretos — NUNCA al repo (es público)
+.dev.vars
+.env
+.env.*
+!.env.example
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Tests
+playwright-report/
+test-results/
+coverage/
+
+# Tipos generados
+worker-configuration.d.ts
+src/shared/database.types.ts
+
+# SO / editor
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
