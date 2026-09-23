@@ -4,5 +4,5 @@
     "lib": ["ES2022"],
     "types": ["node"]
   },
-  "include": ["corpus", "tests", "vite.config.ts", "vitest.config.ts", "src/shared", "src/server/jwt.ts"]
+  "include": ["corpus", "tests", "playwright.config.ts", "vite.config.ts", "vitest.config.ts", "src/shared", "src/server/jwt.ts"]
 }

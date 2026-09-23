@@ -7,6 +7,7 @@ import type { StudyCard } from "../../shared/schemas.js";
 import { RecognitionCard } from "../components/RecognitionCard.js";
 import { ClozeCard } from "../components/ClozeCard.js";
 import { ProductionCard } from "../components/ProductionCard.js";
+import { emitCompanion } from "../companion/store.js";
 
 interface SessionResponse {
   cards: StudyCard[];
@@ -30,10 +31,16 @@ export function Study() {
   });
 
   useEffect(() => {
-    if (data) s.load(data.cards, data.warmup_count);
+    if (!data) return;
+    s.load(data.cards, data.warmup_count);
+    emitCompanion({ type: "session_start" });
     // Solo al llegar los datos: recargar aquí reiniciaría la sesión en curso.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
+
+  useEffect(() => {
+    if (current) emitCompanion({ type: "card_shown", card: current });
+  }, [current]);
 
   const review = useMutation({
     mutationFn: (v: { card: StudyCard; grade: number }) =>
@@ -44,7 +51,10 @@ export function Study() {
         context_id: v.card.context?.id ?? null,
         latency_ms: Math.min(Date.now() - useSession.getState().cardShownAt, 600_000),
       }),
-    onSuccess: (res, v) => s.advance(v.grade, res.leveled_up),
+    onSuccess: (res, v) => {
+      if (res.leveled_up) emitCompanion({ type: "leveled_up", card: v.card, level: res.mastery_level });
+      s.advance(v.grade, res.leveled_up);
+    },
   });
 
   if (isLoading) return <Centered>Preparando tu sesión…</Centered>;
@@ -56,7 +66,7 @@ export function Study() {
   const inWarmup = s.index < s.warmupCount;
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6">
+    <div className="mx-auto max-w-lg px-4 pt-6 pb-36 sm:pb-48">
       <Progressbar index={s.index} total={s.cards.length} warmup={inWarmup} />
       {current.mastery_level <= MASTERY.CLOZE_KNOWN - 1 ? (
         <RecognitionCard card={current} onGrade={onGrade} busy={review.isPending} />
@@ -94,13 +104,21 @@ function Summary({ onRestart }: { onRestart: () => void }) {
 
   useEffect(() => {
     // Solo completar la sesión mueve la racha. Los minijuegos no.
+    const total = grades.length;
     api.post<{ current_streak: number }>("/api/session/complete", {})
-      .then((r) => setStreak(r.current_streak))
-      .catch(() => setStreak(null));
+      .then((r) => {
+        setStreak(r.current_streak);
+        emitCompanion({ type: "session_done", correct: aciertos, total, streak: r.current_streak });
+      })
+      .catch(() => {
+        setStreak(null);
+        emitCompanion({ type: "session_done", correct: aciertos, total, streak: null });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-10 text-center">
+    <div className="mx-auto max-w-lg px-4 pt-10 pb-48 text-center">
       <h2 className="mb-2 text-3xl font-bold">Sesión completa</h2>
       <p className="mb-8 opacity-60">
         {aciertos} de {grades.length} bien · {minutos} min

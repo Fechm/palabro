@@ -1,0 +1,29 @@
+{
+  "frameSize": 71,
+  "animations": {
+    "idle": {
+      "frames": 4
+    },
+    "talk": {
+      "frames": 4
+    },
+    "happy": {
+      "frames": 4
+    },
+    "oops": {
+      "frames": 4
+    },
+    "thinking": {
+      "frames": 4
+    },
+    "celebrate": {
+      "frames": 5
+    },
+    "wow": {
+      "frames": 4
+    },
+    "wave": {
+      "frames": 5
+    }
+  }
+}

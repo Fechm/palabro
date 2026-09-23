@@ -45,7 +45,7 @@ No introduzcas nada de pago sin preguntar al usuario.
   20 válidas.
 - **Cliente abierto en Chromium real con Playwright**: renderiza, cero errores
   de consola, el flujo de magic link llega a la confirmación.
-- `npm run typecheck` limpio en los tres entornos · **20/20 tests**.
+- `npm run typecheck` limpio en los tres entornos · **46/46 tests** · **3/3 E2E**.
 
 ### NO verificado
 - **Nadie ha estudiado una tarjeta real.** La base está vacía: hasta que se
@@ -64,6 +64,14 @@ No introduzcas nada de pago sin preguntar al usuario.
    interfaz no existe. Empezar por **contrarreloj** (solo SQL, sin IA) y
    **¿nativo o no?** (usa `contexts.native_variant`, ya en el corpus).
 6. TTS precomputado a R2 para `contexts.audio_url`.
+
+### Hecho después del traspaso (2026-09-23)
+- **Acompañante corgi** en la pestaña Estudiar: reacciona a aciertos, fallos,
+  veredictos y subidas de nivel, y en los fallos cita el falso amigo / error
+  típico / nota de uso del corpus. Diseño en
+  `docs/superpowers/specs/2026-09-23-companion-perro-design.md`.
+  Sprites: la IA genera la hoja → `python scripts/sprites/build.py assets-src/companion/sheet.webp`
+  → `public/companion/*.png` + `src/client/companion/manifest.json`. **Nunca editar los PNG a mano.**
 
 ---
 
@@ -248,6 +256,12 @@ FSRS son lógica de servidor.
    archivo a la versión que quedó registrada.
 11. **`npm run dev` necesita sesión de Cloudflare** (`npx wrangler login`): el
    binding de Workers AI siempre es remoto, incluso en local.
+12. **Sprites CSS: `steps(N, jump-none)` hacia `-(N-1) × ancho`.** Con
+   `steps(N)` hacia `-N × ancho` y `forwards`, la animación de una vez termina
+   en un frame vacío.
+13. **E2E sin usuario real:** `tests/e2e` siembra una sesión falsa de Supabase
+   en `localStorage` (`sb-<ref>-auth-token`) y simula `/api/*` con `page.route`.
+   Corren con el Chrome instalado (`npx playwright test`, Node 24 en el PATH).
 
 ---
 
@@ -276,7 +290,8 @@ La anon key es pública por diseño; lo que protege los datos es la RLS.
 npm install
 npm run dev          # Vite + el Worker en workerd real, con bindings de verdad
 npm run typecheck    # los tres entornos
-npm test             # 20 tests
+npm test             # 46 tests
+npx playwright test  # 3 E2E (Chrome instalado)
 npm run build
 npm run deploy
 

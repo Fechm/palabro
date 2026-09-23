@@ -37,3 +37,13 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .card-in { animation: none; }
 }
+
+@keyframes companion-play {
+  to { background-position: var(--companion-end) 0; }
+}
+.companion-sprite { image-rendering: pixelated; background-repeat: no-repeat; }
+.companion-bubble { animation: card-in .18s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .companion-sprite, .companion-bubble { animation: none !important; }
+}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { StudyCard, Verdict } from "../../shared/schemas.js";
 import { api } from "../lib/api.js";
 import { LexemeHeader } from "./LexemeHeader.js";
+import { emitCompanion } from "../companion/store.js";
 
 /**
  * Nivel 4 — Producción libre. El diferenciador de la app.
@@ -20,14 +21,17 @@ export function ProductionCard({
   async function submit() {
     setSending(true);
     setError(null);
+    emitCompanion({ type: "produce_pending", card });
     try {
       const v = await api.post<Verdict>("/api/produce", {
         lexeme_id: card.lexeme.id,
         sentence: sentence.trim(),
       });
       setVerdict(v);
+      emitCompanion({ type: "verdict", card, verdict: v });
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo evaluar.");
+      emitCompanion({ type: "produce_failed", card });
     } finally {
       setSending(false);
     }

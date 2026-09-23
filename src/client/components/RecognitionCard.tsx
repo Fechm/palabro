@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { StudyCard } from "../../shared/schemas.js";
 import { LexemeHeader } from "./LexemeHeader.js";
 import { GradeButtons } from "./GradeButtons.js";
+import { emitCompanion } from "../companion/store.js";
 
 /**
  * Nivel 1 — Reconocimiento con contexto.
@@ -14,6 +15,10 @@ export function RecognitionCard({
   card, onGrade, busy,
 }: { card: StudyCard; onGrade: (g: number) => void; busy?: boolean }) {
   const [revealed, setRevealed] = useState(false);
+  const grade = (g: number) => {
+    emitCompanion({ type: "answer", card, correct: g >= 2, kind: "recognition" });
+    onGrade(g);
+  };
 
   return (
     <div className="card-in">
@@ -53,7 +58,7 @@ export function RecognitionCard({
             </div>
           )}
 
-          <GradeButtons onGrade={onGrade} disabled={busy} />
+          <GradeButtons onGrade={grade} disabled={busy} />
         </div>
       )}
     </div>

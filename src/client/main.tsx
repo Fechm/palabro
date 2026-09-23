@@ -6,6 +6,7 @@ import { supabase } from "./lib/supabase.js";
 import { Login } from "./components/Login.js";
 import { Study } from "./routes/Study.js";
 import { Progress } from "./routes/Progress.js";
+import { Companion } from "./companion/Companion.js";
 import "./index.css";
 
 const qc = new QueryClient({
@@ -41,6 +42,7 @@ function App() {
   return (
     <div className="min-h-full pb-20">
       {tab === "study" ? <Study /> : <Progress />}
+      {tab === "study" && <Companion />}
 
       <nav className="fixed inset-x-0 bottom-0 border-t border-black/10 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-slate-900/90">
         <div className="mx-auto flex max-w-lg">

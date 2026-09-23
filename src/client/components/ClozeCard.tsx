@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { StudyCard } from "../../shared/schemas.js";
 import { LexemeHeader } from "./LexemeHeader.js";
+import { emitCompanion } from "../companion/store.js";
 
 /**
  * Niveles 2 y 3 — Hueco en la frase.
@@ -33,6 +34,10 @@ export function ClozeCard({
   const before = ctx.text.slice(0, ctx.cloze_start);
   const after = ctx.text.slice(ctx.cloze_end);
   const correct = picked === answer;
+  const choose = (value: string) => {
+    setPicked(value);
+    emitCompanion({ type: "answer", card, correct: value === answer, kind: "cloze" });
+  };
 
   return (
     <div className="card-in">
@@ -56,13 +61,13 @@ export function ClozeCard({
 
       {!picked ? (
         typed ? (
-          <TypeAnswer onAnswer={setPicked} />
+          <TypeAnswer onAnswer={choose} />
         ) : (
         <div className="grid grid-cols-2 gap-2">
           {options.map((o) => (
             <button
               key={o}
-              onClick={() => setPicked(o)}
+              onClick={() => choose(o)}
               className="rounded-xl border border-black/10 bg-white py-4 text-lg transition hover:border-indigo-400 dark:border-white/10 dark:bg-white/5"
             >
               {o}
