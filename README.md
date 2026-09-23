@@ -104,13 +104,13 @@ npm test
 
 | Parte | Estado |
 |---|---|
-| Esquema de datos + RLS + RPC | escrito, **sin ejecutar contra Postgres todavía** |
+| Esquema de datos + RLS + RPC | **aplicado y probado en Postgres 17 real** |
 | Contratos Zod compartidos | listo, con tests |
 | Lógica de progresión de dominio | listo, con tests |
 | Lista de 2.800 palabras | generada y versionada |
 | Generador y validador de corpus | **probado contra Gemini de verdad** |
 | CI (tipos, tests, migraciones) | listo |
-| API (Hono) | pendiente |
+| API (Hono) | listo, probado con wrangler dev |
 | Cliente (React) | pendiente |
 | Minijuegos | pendiente |
 
