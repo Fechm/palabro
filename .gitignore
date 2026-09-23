@@ -32,3 +32,4 @@ src/shared/database.types.ts
 # Fuentes crudas del corpus (se descargan solas, no se versionan)
 corpus/data/en_50k.txt
 corpus/data/words_alpha.txt
+corpus/data/lemmatization-en.txt

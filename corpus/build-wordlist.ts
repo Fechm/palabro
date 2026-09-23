@@ -13,6 +13,9 @@
  *  · english-words (dwyl) — 370k palabras inglesas, para descartar
  *    nombres propios y ruido. Dominio publico.
  *
+ *  · lemmatization-lists (michmech) — pares lema/forma del ingles, para
+ *    llevar cada inflexion a su lema. ODbL 1.0.
+ *
  * La lista cruda trae mucha basura: fragmentos de contraccion ('s, 't),
  * nombres de personajes, interjecciones y todas las formas flexionadas
  * por separado. Este script las limpia.
@@ -20,14 +23,46 @@
 import { writeFileSync, existsSync, readFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseLemmaFile, pickLemma, preferForm } from "./lemmatize.js";
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), "data");
 const FREQ = join(DATA, "en_50k.txt");
 const DICT = join(DATA, "words_alpha.txt");
+const LEMMAS = join(DATA, "lemmatization-en.txt");
 const OUT = join(DATA, "wordlist.csv");
 
 const FREQ_URL = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/en/en_50k.txt";
 const DICT_URL = "https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt";
+const LEMMAS_URL = "https://raw.githubusercontent.com/michmech/lemmatization-lists/master/lemmatization-en.txt";
+
+const SHORT_OK = new Set(["go", "tv"]);
+
+const PROPER_NOUNS = new Set([
+  "john","jesus","sam","michael","george","david","york","charlie","america","paul","mary","ben",
+  "james","danny","paris","london","alex","jim","tony","adam","steve","sarah","richard","jane",
+  "johnny","tommy","eddie","jake","robert","chris","charles","amy","roger","kim","jeff","france",
+  "kevin","dan","england","daniel","eric","thomas","scott","pete","kate","dave","brian","william",
+  "larry","simon","jerry","andy","jason","santa","tim","alan","europe","emily","kelly","alice",
+  "walter","rachel","rome","arthur","lucy","phil","emma","carl","annie","india","gary","luke",
+  "claire","fred","washington","carter","louis","josh","sean","susan","germany","africa","kyle",
+  "clark","blake","japan","california","elizabeth","chicago","karen","jackson","helen","julie",
+  "taylor","gordon","joey","mexico","greg","jones","ricky","jamie","amanda","maggie","marty",
+  "howard","hitler","barry","anne","johnson","patrick","terry","andrew","hollywood","jackie",
+  "jesse","sara","stan","marie","doug","abby","jean","linda","bruce","katie","roy","todd","lou",
+  "albert","parker","joseph","oliver","wilson","donna","italy","vincent","angela","jessica",
+  "steven","charlotte","justin","kong","jordan","betty","edward","texas","nathan","margaret","ross",
+  "lewis","tyler","catherine","stephen","rebecca","barbara","russia","tina","jeremy","ellen",
+  "kenny","nina","carlos","michelle","brad","oscar","chloe","tokyo","davis","wayne","ian","spain",
+  "nancy","russell","judy","beth","angeles","martha","harvey","ann","jonathan","dennis","dylan",
+  "eva","francisco","jess","jennifer","anthony","cooper","boston","ron","derek","virginia","vince",
+  "matthew","francis","britain","vic","casey","jacob","liz","gus","nate","olivia","louise",
+  "williams","ralph","keith","malcolm","ethan","cole","stanley","rita","maya","toby","jin","sammy",
+  "philip","carrie","julian","alexander","florida","aaron","lois","victoria","ruth","diane","craig",
+  "harold","monica","diana","miami","owen","marshall","scotland","canada","han","von","marco","fbi",
+  "cia","joan","herr","karl","shawn","natalie","nelson","korea","janet","harris","mia","raymond","sonny",
+  "wendy","juan","riley","sydney","neil","gloria","shane","felix","moscow","logan","noah","evan","christine","mel",
+  "graham","ivan","lincoln","travis","leslie","brandon",
+]);
 
 /** Interjecciones y muletillas: frecuentisimas en subtitulos, inutiles como tarjeta. */
 const NOISE = new Set([
@@ -39,6 +74,7 @@ const NOISE = new Set([
   // Fragmentos de contraccion: la lista cruda parte "don't" en "don"+"t".
   "don","didn","doesn","isn","wasn","aren","weren","haven","hasn","hadn",
   "couldn","wouldn","shouldn","mustn","ain","ve","ll","re","em","til",
+  "whoo","heh","gosh","jeez","blah","gimme","indistinct","thou","thy","mrs","indistinctly",
 ]);
 
 /**
@@ -75,24 +111,6 @@ const FUNCTION_WORDS = new Set([
   "who","what","when","where","why","how","which","whom","whose","not","no","yes",
 ]);
 
-/** Formas base plausibles de una palabra flexionada. */
-function baseForms(w: string): string[] {
-  const out: string[] = [];
-  const push = (s: string) => { if (s.length >= 2) out.push(s); };
-
-  if (w.endsWith("ies")) { push(w.slice(0, -3) + "y"); push(w.slice(0, -2)); }
-  if (w.endsWith("ied")) { push(w.slice(0, -3) + "y"); }
-  if (w.endsWith("es"))  { push(w.slice(0, -2)); push(w.slice(0, -1)); }
-  if (w.endsWith("s") && !w.endsWith("ss")) push(w.slice(0, -1));
-  if (w.endsWith("ed"))  { push(w.slice(0, -2)); push(w.slice(0, -1)); }
-  if (w.endsWith("ing")) { push(w.slice(0, -3)); push(w.slice(0, -3) + "e"); }
-  // Consonante doblada: stopping -> stop, running -> run
-  const m = /^(.*?)([bdfglmnprt])\2(ing|ed)$/.exec(w);
-  if (m?.[1] && m[2]) push(m[1] + m[2]);
-  if (w.endsWith("ly"))  push(w.slice(0, -2));   // solo para detectar duplicados
-  return [...new Set(out)];
-}
-
 async function ensure(path: string, url: string, label: string) {
   if (existsSync(path)) return;
   process.stdout.write(`Descargando ${label}… `);
@@ -117,14 +135,23 @@ async function main() {
 
   await ensure(FREQ, FREQ_URL, "lista de frecuencias (OpenSubtitles)");
   await ensure(DICT, DICT_URL, "diccionario ingles");
+  await ensure(LEMMAS, LEMMAS_URL, "lista de lemas");
 
   const dict = new Set(
     readFileSync(DICT, "utf8").split("\n").map((w) => w.trim().toLowerCase()).filter(Boolean),
   );
 
+  const lemmas = parseLemmaFile(readFileSync(LEMMAS, "utf8"));
+  const excluded = (w: string) => NOISE.has(w) || FUNCTION_WORDS.has(w) || PROPER_NOUNS.has(w);
+  const counts = new Map<string, number>();
+  for (const line of readFileSync(FREQ, "utf8").split("\n")) {
+    const [w, n] = line.trim().split(" ");
+    if (w && n) counts.set(w.toLowerCase(), Number(n));
+  }
+
   const accepted: string[] = [];
   const acceptedSet = new Set<string>();
-  const stats = { total: 0, noAlpha: 0, noise: 0, notInDict: 0, inflected: 0, lemmatized: 0 };
+  const stats = { total: 0, noAlpha: 0, noise: 0, notInDict: 0, tooShort: 0, inflected: 0, lemmatized: 0 };
 
   for (const line of readFileSync(FREQ, "utf8").split("\n")) {
     const word = line.split(" ")[0]?.trim().toLowerCase();
@@ -132,17 +159,15 @@ async function main() {
     stats.total++;
 
     if (!/^[a-z]+$/.test(word) || word.length < 2) { stats.noAlpha++; continue; }
-    if (NOISE.has(word) || FUNCTION_WORDS.has(word)) { stats.noise++;  continue; }
+    if (excluded(word))                             { stats.noise++;  continue; }
     if (!dict.has(word))                            { stats.notInDict++; continue; }
 
-    // Si ya aceptamos su forma base (mas frecuente), esta es una flexion.
-    const bases = baseForms(word);
-    if (bases.some((b) => acceptedSet.has(b))) { stats.inflected++; continue; }
-
-    // Preferimos el lema sobre la flexion: si "decided" es mas frecuente
-    // que "decide" pero "decide" existe, la tarjeta ensena "decide".
-    const lemma = bases.find((b) => dict.has(b) && !acceptedSet.has(b)) ?? word;
-    if (acceptedSet.has(lemma)) { stats.inflected++; continue; }
+    const picked = pickLemma(word, lemmas, excluded);
+    const lemma = picked && preferForm(word, picked, counts);
+    if (!lemma || excluded(lemma))                    { stats.noise++; continue; }
+    if (lemma.length < 3 && !SHORT_OK.has(lemma))     { stats.tooShort++; continue; }
+    if (!dict.has(lemma))                             { stats.notInDict++; continue; }
+    if (acceptedSet.has(lemma))                       { stats.inflected++; continue; }
     if (lemma !== word) stats.lemmatized++;
 
     accepted.push(lemma);
@@ -159,6 +184,7 @@ async function main() {
   console.log(`  descartados por forma:      ${stats.noAlpha}`);
   console.log(`  interjecciones y funcion:   ${stats.noise}`);
   console.log(`  fuera del diccionario:      ${stats.notInDict}  (nombres propios, jerga)`);
+  console.log(`  demasiado cortas:           ${stats.tooShort}`);
   console.log(`  formas flexionadas:         ${stats.inflected}`);
   console.log(`  reducidas a su lema:        ${stats.lemmatized}`);
   console.log(`\nSaltadas (palabras funcion): ${skip}`);

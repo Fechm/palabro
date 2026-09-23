@@ -37,6 +37,7 @@ const WORDLIST = join(DATA, "wordlist.csv");
 const MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 const BATCH_SIZE = 10;
 const MAX_RETRIES = 4;
+const MAX_RATE_WAITS = 10;
 const PAUSE_MS = 1_500; // cortesia entre lotes; el free tier limita por minuto
 
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -60,8 +61,7 @@ function parseArgs() {
 function loadWordlist(): WordRow[] {
   if (!existsSync(WORDLIST)) {
     console.error(`No encuentro ${WORDLIST}`);
-    console.error("Descarga la NGSL (New General Service List) y guardala como");
-    console.error("corpus/data/wordlist.csv con columnas: freq_rank,lemma,pos");
+    console.error("Generala con: npm run corpus:wordlist");
     console.error("Ver corpus/data/README.md");
     process.exit(1);
   }
@@ -94,10 +94,10 @@ function loadDone(): Set<string> {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function callGemini(words: WordRow[]): Promise<unknown> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-goog-api-key": API_KEY! },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents: [{ role: "user", parts: [{ text: buildBatchPrompt(words) }] }],
@@ -109,7 +109,15 @@ async function callGemini(words: WordRow[]): Promise<unknown> {
     }),
   });
 
-  if (res.status === 429) throw Object.assign(new Error("rate_limited"), { code: 429 });
+  if (res.status === 429) {
+    const body = await res.text();
+    const retry = /"retryDelay":\s*"(\d+(?:\.\d+)?)s"/.exec(body);
+    throw Object.assign(new Error("rate_limited"), {
+      code: 429,
+      daily: /PerDay/i.test(body),
+      retryMs: retry ? Math.ceil(Number(retry[1]) * 1000) + 1_000 : 60_000,
+    });
+  }
   // 503 = el modelo esta saturado. Es transitorio y frecuente en el free
   // tier: merece una espera mas larga que un error normal.
   if (res.status === 503) throw Object.assign(new Error("modelo saturado"), { code: 503 });
@@ -122,6 +130,7 @@ async function callGemini(words: WordRow[]): Promise<unknown> {
 }
 
 async function generateBatch(words: WordRow[]): Promise<CorpusEntry[]> {
+  let rateWaits = 0;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const raw = await callGemini(words);
@@ -136,6 +145,12 @@ async function generateBatch(words: WordRow[]): Promise<CorpusEntry[]> {
       if (ok.length === 0) throw new Error("Ninguna entrada paso la validacion");
       return ok;
     } catch (err: any) {
+      if (err.code === 429 && !err.daily && ++rateWaits <= MAX_RATE_WAITS) {
+        console.warn(`  ⏳ limite por minuto. Espero ${Math.round(err.retryMs / 1000)}s`);
+        await sleep(err.retryMs);
+        attempt--;
+        continue;
+      }
       if (err.code === 429) {
         // Cuota diaria agotada: parar limpio, mañana se reanuda.
         console.error("\n⛔ Cuota diaria de Gemini agotada.");

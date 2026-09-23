@@ -17,10 +17,10 @@ export async function askGemini<T>(
   // concretos se retiran para cuentas nuevas sin aviso.
   const model = env.GEMINI_MODEL ?? "gemini-flash-latest";
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {

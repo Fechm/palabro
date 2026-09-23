@@ -45,7 +45,7 @@ No introduzcas nada de pago sin preguntar al usuario.
   20 válidas.
 - **Cliente abierto en Chromium real con Playwright**: renderiza, cero errores
   de consola, el flujo de magic link llega a la confirmación.
-- `npm run typecheck` limpio en los tres entornos · **46/46 tests** · **3/3 E2E**.
+- `npm run typecheck` limpio en los tres entornos · **55/55 tests** · **3/3 E2E**.
 
 ### NO verificado
 - **Nadie ha estudiado una tarjeta real.** La base está vacía: hasta que se
@@ -56,7 +56,9 @@ No introduzcas nada de pago sin preguntar al usuario.
 - Los workflows de GitHub Actions nunca han corrido.
 
 ### Pendiente, en orden de prioridad
-1. **Generar y sembrar el corpus** — desbloquea todo lo demás.
+1. **Generar y sembrar el corpus** — desbloquea todo lo demás. La lista ya está
+   corregida (trampa 14); falta que Gemini responda: el 2026-09-23 todos los modelos
+   Flash devolvían 503 en el free tier.
 2. **Probar el loop completo** con un usuario real. Aquí van a salir cosas.
 3. **Desplegar** a Cloudflare Workers.
 4. Nivel 5 (audio): Whisper en Workers AI para la parte oral.
@@ -262,6 +264,15 @@ FSRS son lógica de servidor.
 13. **E2E sin usuario real:** `tests/e2e` siembra una sesión falsa de Supabase
    en `localStorage` (`sb-<ref>-auth-token`) y simula `/api/*` con `page.route`.
    Corren con el Chrome instalado (`npx playwright test`, Node 24 en el PATH).
+14. **La lista de 2.800 palabras venía rota** (2026-09-23): la lematización por
+   sufijos convertía *need → ne*, *thing → th*, *only → on* y descartaba *really*
+   o *actually* como "inflexiones" de *real* y *actual*. Faltaban 34 de 47 palabras
+   frecuentes de control. Ahora usa `lemmatization-lists` (`corpus/lemmatize.ts`,
+   con tests) y una lista de nombres propios revisada a mano. **Regenerar la lista
+   invalida el `corpus.jsonl` de lo que salga de ella.**
+15. **429 de Gemini no siempre es la cuota diaria.** El cuerpo trae `PerDay` o
+   `PerMinute` y un `retryDelay`; con el límite por minuto el generador espera y
+   sigue. La API key va en el header `x-goog-api-key`, nunca en la URL.
 
 ---
 
@@ -290,7 +301,7 @@ La anon key es pública por diseño; lo que protege los datos es la RLS.
 npm install
 npm run dev          # Vite + el Worker en workerd real, con bindings de verdad
 npm run typecheck    # los tres entornos
-npm test             # 46 tests
+npm test             # 55 tests
 npx playwright test  # 3 E2E (Chrome instalado)
 npm run build
 npm run deploy

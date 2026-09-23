@@ -2,11 +2,13 @@
 
 ## Lista de vocabulario
 
-El corpus de Palabro deriva de la **NGSL (New General Service List)**,
-de Browne, Culligan y Phillips.
+`corpus/data/wordlist.csv` se construye con `npm run corpus:wordlist` a partir de:
 
-- <https://www.newgeneralservicelist.com/>
-- Licencia: **CC BY-SA**
+| Fuente | Uso | Licencia |
+|---|---|---|
+| [FrequencyWords](https://github.com/hermitdave/FrequencyWords) (Hermit Dave), frecuencias de OpenSubtitles 2018 | orden por frecuencia del inglés hablado | **CC BY-SA 4.0** |
+| [english-words](https://github.com/dwyl/english-words) (dwyl) | descartar palabras que no son inglés | Unlicense (dominio público) |
+| [lemmatization-lists](https://github.com/michmech/lemmatization-lists) (Michal Měchura) | llevar cada inflexión a su lema | **ODbL 1.0** |
 
 El contenido generado a partir de esa lista (definiciones, frases de ejemplo,
 notas de uso) es obra derivada y **hereda la licencia CC BY-SA**. Si

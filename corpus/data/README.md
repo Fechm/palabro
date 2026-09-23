@@ -2,29 +2,31 @@
 
 ## `wordlist.csv` — la lista de partida (generada por `npm run corpus:wordlist`)
 
-Formato: `freq_rank,lemma,pos` (la cabecera es opcional, `pos` tambien).
+Formato: `freq_rank,lemma` (acepta una tercera columna `pos` opcional).
 
 ```csv
-freq_rank,lemma,pos
-1,the,determiner
-2,be,verb
-3,of,preposition
+freq_rank,lemma
+1,know
+2,just
+3,there
 ```
 
-### De donde sacarla
+### Cómo se construye
 
-**NGSL (New General Service List)** — 2.801 palabras que cubren ~92% del
-ingles general. Es la recomendada: esta hecha exactamente para esto.
+`corpus/build-wordlist.ts` descarga tres fuentes (ver `CREDITS.md`) y:
 
-- Sitio: <https://www.newgeneralservicelist.com/>
-- Licencia: CC BY-SA. **Revisa los terminos antes de publicar** y manten
-  la atribucion en `CREDITS.md`.
+1. ordena por frecuencia en subtítulos (inglés hablado real);
+2. descarta interjecciones, palabras función, fragmentos de contracción,
+   nombres propios y palabras de menos de 3 letras (salvo `go` y `tv`);
+3. lleva cada inflexión a su lema con `lemmatization-lists` (*went → go*,
+   *eyes → eye*), salvo que la forma sea lema propio (*building*, *better*)
+   o un adjetivo en -ing/-ed que domina sobre su verbo por 1,5× o más
+   (*interesting*, *tired*); la lógica está en `corpus/lemmatize.ts`.
 
-Complementos opcionales:
-- **NAWL** — vocabulario academico
-- **TSL** — lenguaje de examenes (TOEIC)
+La lista de nombres propios se revisó a mano. Si cambias `--limit`,
+revisa las palabras nuevas del final: ahí aparecen nombres que antes quedaban fuera.
 
-> El corpus derivado hereda la licencia de la lista de origen.
+> El corpus derivado hereda la licencia CC BY-SA de la lista de frecuencias.
 
 ## Archivos generados (versionados en git)
 
