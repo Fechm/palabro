@@ -25,6 +25,10 @@ REGLAS INNEGOCIABLES
 
 8. cefr: el nivel de la PALABRA. El campo level de cada frase es el nivel de LA FRASE, y puede ser mas bajo: ensenar una palabra dificil con una frase facil es deseable.
 
+9. IDIOMA. Van en ESPANOL: definition_es, gloss_es, usage_note, false_friend.warning y common_errors. Van en INGLES: definition_en, las frases de contexts y native_variant. No mezcles.
+
+10. Incluye SIEMPRE todas las claves del esquema. Cuando un campo no aplique, mandalo explicitamente como null o como lista vacia; no lo omitas.
+
 Responde unicamente con el JSON pedido, sin texto adicional.`;
 
 export function buildBatchPrompt(words: { lemma: string; pos?: string }[]): string {

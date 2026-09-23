@@ -13,7 +13,8 @@ export const corpusContextSchema = z.object({
   gloss_es: z.string().min(3).max(220),
   level: z.enum(CEFR),
   /** Como lo diria un nativo si la frase sonara rara. Alimenta ¿Nativo o no? */
-  native_variant: z.string().max(200).nullable(),
+  // El modelo omite la clave en vez de mandarla como null: nullish + default.
+  native_variant: z.string().max(200).nullish().default(null),
 });
 
 export const corpusEntrySchema = z.object({
@@ -23,7 +24,7 @@ export const corpusEntrySchema = z.object({
   ipa: z.string().max(60),
   definition_en: z.string().min(10).max(220),
   definition_es: z.string().min(2).max(220),
-  usage_note: z.string().max(300),
+  usage_note: z.string().max(300).nullish().default(""),
 
   /**
    * El campo de mayor valor para hispanohablantes. `null` cuando la
@@ -32,12 +33,13 @@ export const corpusEntrySchema = z.object({
    */
   false_friend: z
     .object({ es_word: z.string(), warning: z.string().max(240) })
-    .nullable(),
+    .nullish()
+    .default(null),
 
   collocations: z.array(z.string()).min(2).max(6),
 
   /** Errores tipicos de hispanohablantes con ESTA palabra. */
-  common_errors: z.array(z.string()).max(4),
+  common_errors: z.array(z.string()).max(4).nullish().default([]),
 
   /** 5 frases graduadas de facil a dificil. */
   contexts: z.array(corpusContextSchema).min(3).max(5),

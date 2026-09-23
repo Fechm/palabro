@@ -80,8 +80,9 @@ Se hace **una vez**. El contenido queda en la base y lo comparten todos los
 usuarios para siempre.
 
 ```bash
-# 1. Descarga la NGSL → corpus/data/wordlist.csv   (ver corpus/data/README.md)
-npm run corpus:generate -- --limit 50   # prueba corta primero
+export GEMINI_API_KEY=...                # gratis en aistudio.google.com/apikey
+npm run corpus:wordlist                  # ya viene generada; solo si quieres rehacerla
+npm run corpus:generate -- --limit 50    # prueba corta primero
 npm run corpus:validate                 # lee el informe
 npm run corpus:generate                 # el resto
 npm run corpus:validate
@@ -106,7 +107,8 @@ npm test
 | Esquema de datos + RLS + RPC | escrito, **sin ejecutar contra Postgres todavía** |
 | Contratos Zod compartidos | listo, con tests |
 | Lógica de progresión de dominio | listo, con tests |
-| Generador y validador de corpus | listo, probado con datos de muestra |
+| Lista de 2.800 palabras | generada y versionada |
+| Generador y validador de corpus | **probado contra Gemini de verdad** |
 | CI (tipos, tests, migraciones) | listo |
 | API (Hono) | pendiente |
 | Cliente (React) | pendiente |

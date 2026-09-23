@@ -1,6 +1,6 @@
 # Datos del corpus
 
-## `wordlist.csv` — la lista de partida (NO se genera, se descarga)
+## `wordlist.csv` — la lista de partida (generada por `npm run corpus:wordlist`)
 
 Formato: `freq_rank,lemma,pos` (la cabecera es opcional, `pos` tambien).
 

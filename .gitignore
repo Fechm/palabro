@@ -28,3 +28,7 @@ src/shared/database.types.ts
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Fuentes crudas del corpus (se descargan solas, no se versionan)
+corpus/data/en_50k.txt
+corpus/data/words_alpha.txt

@@ -31,9 +31,12 @@ const DATA = join(HERE, "data");
 const OUT = join(DATA, "corpus.jsonl");
 const WORDLIST = join(DATA, "wordlist.csv");
 
-const MODEL = "gemini-2.5-flash";
+// Alias que Google mantiene apuntando al Flash vigente: los modelos
+// concretos se retiran para cuentas nuevas sin previo aviso.
+// Se puede fijar uno concreto con GEMINI_MODEL=...
+const MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 const BATCH_SIZE = 10;
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 4;
 const PAUSE_MS = 1_500; // cortesia entre lotes; el free tier limita por minuto
 
 const API_KEY = process.env.GEMINI_API_KEY;
@@ -107,6 +110,9 @@ async function callGemini(words: WordRow[]): Promise<unknown> {
   });
 
   if (res.status === 429) throw Object.assign(new Error("rate_limited"), { code: 429 });
+  // 503 = el modelo esta saturado. Es transitorio y frecuente en el free
+  // tier: merece una espera mas larga que un error normal.
+  if (res.status === 503) throw Object.assign(new Error("modelo saturado"), { code: 503 });
   if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 300)}`);
 
   const json = (await res.json()) as any;
@@ -136,7 +142,7 @@ async function generateBatch(words: WordRow[]): Promise<CorpusEntry[]> {
         console.error("   El progreso esta guardado. Vuelve a correr el script mañana.");
         process.exit(0);
       }
-      const wait = 2_000 * 2 ** (attempt - 1);
+      const wait = (err.code === 503 ? 15_000 : 2_000) * 2 ** (attempt - 1);
       console.warn(`  ⚠ intento ${attempt}/${MAX_RETRIES} fallo (${err.message}). Reintento en ${wait / 1000}s`);
       if (attempt === MAX_RETRIES) return [];
       await sleep(wait);
