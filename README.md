@@ -115,6 +115,12 @@ npm test
 | Cliente (React) | loop de estudio y progreso, probado en navegador |
 | Minijuegos | pendiente |
 
+## ¿Continuando el proyecto?
+
+Lee **[HANDOFF.md](./HANDOFF.md)** antes de tocar nada: recoge el estado real
+(qué está verificado y qué no), las decisiones de diseño que no conviene
+deshacer y las trampas ya pisadas.
+
 ## Licencia y créditos
 
 Ver [CREDITS.md](./CREDITS.md). El corpus deriva de la NGSL y hereda su
