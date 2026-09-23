@@ -45,7 +45,7 @@ No introduzcas nada de pago sin preguntar al usuario.
   20 válidas.
 - **Cliente abierto en Chromium real con Playwright**: renderiza, cero errores
   de consola, el flujo de magic link llega a la confirmación.
-- `npm run typecheck` limpio en los tres entornos · **16/16 tests**.
+- `npm run typecheck` limpio en los tres entornos · **20/20 tests**.
 
 ### NO verificado
 - **Nadie ha estudiado una tarjeta real.** La base está vacía: hasta que se
@@ -94,7 +94,7 @@ src/
     mastery.ts        progresión de dominio (con tests)
   server/           <- Hono sobre Workers
     index.ts          montaje de rutas + handler del cron
-    middleware/auth   verifica el JWT de Supabase con jose (firma local, ~1ms)
+    middleware/auth   verifica el JWT de Supabase contra su JWKS (ES256, firma local, ~1ms)
     routes/           session, review, produce, explain, progress, game
     ai/               gemini.ts -> workers-ai.ts (cascada), prompts.ts
     fsrs.ts           puente entre las filas de Postgres y ts-fsrs
@@ -239,6 +239,15 @@ FSRS son lógica de servidor.
 8. **`@cloudflare/vitest-pool-workers` está fuera** a propósito: exige
    vitest 4, que dispara un bug de resolución de npm. Volverá cuando haya
    tests del Worker.
+9. **Supabase firma los JWT con ES256 (JWKS), no con HS256.** Verificar con
+   el JWT secret rechaza a todo usuario real. `src/server/jwt.ts` valida
+   contra `/auth/v1/.well-known/jwks.json` y comprueba el `issuer`.
+10. **Aplicar migraciones por el MCP les pone otro timestamp.** Los nombres de
+   `supabase/migrations/` deben coincidir con `supabase_migrations.schema_migrations`,
+   o `db push` intentará reaplicarlas. Tras aplicar una por MCP, renombra el
+   archivo a la versión que quedó registrada.
+11. **`npm run dev` necesita sesión de Cloudflare** (`npx wrangler login`): el
+   binding de Workers AI siempre es remoto, incluso en local.
 
 ---
 
@@ -246,19 +255,17 @@ FSRS son lógica de servidor.
 
 ### Secretos (ninguno está en el repo)
 
-`.dev.vars` — secretos del **Worker** (`cp .dev.vars.example .dev.vars`):
+Un **único `.env`** en la raíz (`cp .env.example .env`). No existe `.dev.vars`:
+wrangler lee el `.env` cuando no hay `.dev.vars`, Vite expone al bundle solo
+las `VITE_*` y los scripts del corpus lo cargan con `--env-file-if-exists`.
 ```
-SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
-SUPABASE_JWT_SECRET, GEMINI_API_KEY
+VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY     -> cliente (públicas)
+SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+GEMINI_API_KEY, GEMINI_MODEL (opcional)       -> Worker y corpus
 ```
 En producción: `wrangler secret put <NOMBRE>`.
-
-`.env` — variables del **cliente** (`cp .env.example .env`):
-```
-VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
-```
 La anon key es pública por diseño; lo que protege los datos es la RLS.
-**La `service_role` jamás va al cliente ni al repo.**
+**La `service_role` jamás lleva prefijo `VITE_`, ni va al cliente o al repo.**
 
 > ⚠️ El usuario pegó una API key de Gemini en el chat de la sesión anterior.
 > Hay que darla por comprometida y revocarla. Si dice que ya lo hizo, bien.
@@ -269,7 +276,7 @@ La anon key es pública por diseño; lo que protege los datos es la RLS.
 npm install
 npm run dev          # Vite + el Worker en workerd real, con bindings de verdad
 npm run typecheck    # los tres entornos
-npm test             # 16 tests
+npm test             # 20 tests
 npm run build
 npm run deploy
 
@@ -300,7 +307,6 @@ diario del Worker hace keep-alive por eso.
 - Repo: `github.com/Fechm/palabro`, **público**, rama `master`.
   El conector de GitHub no estaba instalado, así que los commits viajaron
   en `.zip`. Conviene comprobar si el remoto está al día:
-  `git log --oneline` debe mostrar 5 commits hasta `9b909fe`.
 - Carpeta local: `C:\Privado\proyecto-cards\palabro` (Windows, PowerShell).
 - **No tiene Docker**, ni en Windows ni disponible. Nada que dependa de
   `supabase start` o de contenedores locales.
@@ -311,7 +317,7 @@ diario del Worker hace keep-alive por eso.
 ## 8. Por dónde empezaría yo
 
 1. `git log --oneline` y `npm test` para confirmar que el traspaso llegó entero.
-2. Comprobar que `.env` y `.dev.vars` están puestos.
+2. Comprobar que `.env` está puesto.
 3. `npm run corpus:generate -- --limit 50` y **leer el informe de validación**:
    es la primera vez que el generador corre con distractores, y ahí puede
    saltar algo.

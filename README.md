@@ -69,8 +69,7 @@ Coste de operación: **0**. Todo vive en capas gratuitas, sin cold starts.
 
 ```bash
 npm install
-cp .dev.vars.example .dev.vars    # secretos del Worker
-cp .env.example .env              # variables del cliente (Vite)
+cp .env.example .env              # único archivo de entorno: cliente, Worker y corpus
 npm run db:start                  # Postgres local (necesita Docker)
 npm run db:reset                  # aplica migraciones
 ```
@@ -81,7 +80,6 @@ Se hace **una vez**. El contenido queda en la base y lo comparten todos los
 usuarios para siempre.
 
 ```bash
-export GEMINI_API_KEY=...                # gratis en aistudio.google.com/apikey
 npm run corpus:wordlist                  # ya viene generada; solo si quieres rehacerla
 npm run corpus:generate -- --limit 50    # prueba corta primero
 npm run corpus:validate                 # lee el informe

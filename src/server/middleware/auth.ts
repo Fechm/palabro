@@ -1,11 +1,19 @@
 import { createMiddleware } from "hono/factory";
-import { jwtVerify } from "jose";
+import { createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
 import type { Env, Vars } from "../env.js";
+import { verifyAccessToken } from "../jwt.js";
 
-/**
- * Verifica el JWT de Supabase comprobando la FIRMA localmente, sin ida y
- * vuelta a Supabase en cada petición. Cuesta ~1ms y no consume cuota.
- */
+const jwksByUrl = new Map<string, JWTVerifyGetKey>();
+
+function projectKeys(supabaseUrl: string): JWTVerifyGetKey {
+  let keys = jwksByUrl.get(supabaseUrl);
+  if (!keys) {
+    keys = createRemoteJWKSet(new URL("/auth/v1/.well-known/jwks.json", supabaseUrl));
+    jwksByUrl.set(supabaseUrl, keys);
+  }
+  return keys;
+}
+
 export const auth = createMiddleware<{ Bindings: Env; Variables: Vars }>(
   async (c, next) => {
     const header = c.req.header("Authorization");
@@ -14,12 +22,8 @@ export const auth = createMiddleware<{ Bindings: Env; Variables: Vars }>(
     }
 
     try {
-      const secret = new TextEncoder().encode(c.env.SUPABASE_JWT_SECRET);
-      const { payload } = await jwtVerify(header.slice(7), secret, {
-        algorithms: ["HS256"],
-      });
-      if (!payload.sub) return c.json({ error: "unauthorized" }, 401);
-      c.set("userId", payload.sub);
+      const url = c.env.SUPABASE_URL;
+      c.set("userId", await verifyAccessToken(header.slice(7), projectKeys(url), `${url}/auth/v1`));
     } catch {
       return c.json({ error: "unauthorized", detail: "token inválido o expirado" }, 401);
     }

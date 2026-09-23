@@ -28,7 +28,6 @@
 
   // Los secretos NO van aqui. Se cargan con:
   //   wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-  //   wrangler secret put SUPABASE_JWT_SECRET
   //   wrangler secret put GEMINI_API_KEY
-  // En local se leen de .dev.vars (ignorado por git).
+  // En local se leen de .env (ignorado por git).
 }
