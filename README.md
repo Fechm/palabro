@@ -69,7 +69,8 @@ Coste de operación: **0**. Todo vive en capas gratuitas, sin cold starts.
 
 ```bash
 npm install
-cp .dev.vars.example .dev.vars    # rellena tus claves
+cp .dev.vars.example .dev.vars    # secretos del Worker
+cp .env.example .env              # variables del cliente (Vite)
 npm run db:start                  # Postgres local (necesita Docker)
 npm run db:reset                  # aplica migraciones
 ```
@@ -111,7 +112,7 @@ npm test
 | Generador y validador de corpus | **probado contra Gemini de verdad** |
 | CI (tipos, tests, migraciones) | listo |
 | API (Hono) | listo, probado con wrangler dev |
-| Cliente (React) | pendiente |
+| Cliente (React) | loop de estudio y progreso, probado en navegador |
 | Minijuegos | pendiente |
 
 ## Licencia y créditos

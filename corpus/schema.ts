@@ -15,6 +15,12 @@ export const corpusContextSchema = z.object({
   /** Como lo diria un nativo si la frase sonara rara. Alimenta ¿Nativo o no? */
   // El modelo omite la clave en vez de mandarla como null: nullish + default.
   native_variant: z.string().max(200).nullish().default(null),
+
+  /**
+   * Opciones incorrectas para la tarjeta de hueco. Sin esto la opcion
+   * multiple tendria una sola opcion y no ensenaria nada.
+   */
+  distractors: z.array(z.string()).max(3).nullish().default([]),
 });
 
 export const corpusEntrySchema = z.object({
@@ -86,6 +92,7 @@ export const geminiResponseSchema = {
             gloss_es: { type: "STRING" },
             level: { type: "STRING", enum: [...CEFR] },
             native_variant: { type: "STRING", nullable: true },
+            distractors: { type: "ARRAY", items: { type: "STRING" } },
           },
         },
       },

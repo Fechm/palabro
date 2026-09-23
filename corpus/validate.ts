@@ -96,12 +96,20 @@ function main() {
     // ── Cada frase debe contener realmente la palabra ─────────────────
     const contexts: any[] = [];
     let contextFailures = 0;
+    let distractorShortfall = 0;
     for (const ctx of e.contexts) {
       const span = findSpan(ctx.text, e.lemma);
       if (!span) { contextFailures++; continue; }
       const words = ctx.text.trim().split(/\s+/).length;
       if (words < 3 || words > 20) { contextFailures++; continue; }
-      contexts.push({ ...ctx, cloze_start: span[0], cloze_end: span[1] });
+      // Un distractor igual a la respuesta convierte la tarjeta en una
+      // trampa: se filtran, junto con los duplicados.
+      const answer = ctx.text.slice(span[0], span[1]).toLowerCase();
+      const distractors = [...new Set((ctx.distractors ?? []).map((d) => d.trim()))]
+        .filter((d) => d && d.toLowerCase() !== answer);
+      if (distractors.length < 3) distractorShortfall++;
+
+      contexts.push({ ...ctx, distractors, cloze_start: span[0], cloze_end: span[1] });
     }
 
     if (contexts.length < 3) {
@@ -110,6 +118,9 @@ function main() {
     }
     if (contextFailures > 0) {
       problems.push({ lemma: e.lemma, issue: `${contextFailures} frase(s) descartada(s)` });
+    }
+    if (distractorShortfall > 0) {
+      problems.push({ lemma: e.lemma, issue: `${distractorShortfall} frase(s) con menos de 3 distractores` });
     }
 
     // ── Colocaciones distintas entre si ───────────────────────────────

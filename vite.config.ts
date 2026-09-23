@@ -36,5 +36,7 @@ export default defineConfig({
       "@client": fileURLToPath(new URL("./src/client", import.meta.url)),
     },
   },
-  build: { outDir: "dist/client" },
+  // Sin outDir explícito: el plugin de Cloudflare ya emite cada entorno en
+  // dist/<nombre-del-entorno>, así que el cliente cae en dist/client. Fijarlo
+  // a mano producía dist/client/client y wrangler no encontraba el index.html.
 });
