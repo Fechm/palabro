@@ -2,6 +2,7 @@
  * Valida el corpus generado y calcula los huecos (cloze).
  *
  *   npm run corpus:validate
+ *   npm run corpus:validate -- --in corpus/data/parts/rev-001.jsonl --report-only
  *
  * Un paso barato que ahorra mucho dolor: el corpus es un activo
  * permanente, y un error aqui lo arrastras durante años.
@@ -17,7 +18,10 @@ import { corpusEntrySchema, type CorpusEntry } from "./schema.js";
 import { CEFR } from "../src/shared/schemas.js";
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), "data");
-const IN = join(DATA, "corpus.jsonl");
+const argv = process.argv.slice(2);
+const inArg = argv.indexOf("--in");
+const IN = inArg >= 0 && argv[inArg + 1] ? argv[inArg + 1]! : join(DATA, "corpus.jsonl");
+const REPORT_ONLY = argv.includes("--report-only");
 const CLEAN = join(DATA, "corpus.clean.jsonl");
 const REJECTED = join(DATA, "rejected.jsonl");
 
@@ -144,8 +148,8 @@ function main() {
     });
   }
 
-  writeFileSync(CLEAN, clean.map((c) => JSON.stringify(c)).join("\n") + "\n");
-  if (rejected.length) {
+  if (!REPORT_ONLY) writeFileSync(CLEAN, clean.map((c) => JSON.stringify(c)).join("\n") + "\n");
+  if (rejected.length && !REPORT_ONLY) {
     writeFileSync(REJECTED, rejected.map((r) => JSON.stringify(r)).join("\n") + "\n");
   }
 
@@ -157,8 +161,9 @@ function main() {
 
   if (problems.length) {
     console.log("\nPrimeros 25 avisos:");
-    for (const p of problems.slice(0, 25)) console.log(`  · ${p.lemma}: ${p.issue}`);
-    if (problems.length > 25) console.log(`  … y ${problems.length - 25} mas`);
+    const shown = REPORT_ONLY ? problems : problems.slice(0, 25);
+    for (const p of shown) console.log(`  · ${p.lemma}: ${p.issue}`);
+    if (problems.length > shown.length) console.log(`  … y ${problems.length - shown.length} mas`);
   }
 
   const withFF = clean.filter((c: any) => c.false_friend).length;

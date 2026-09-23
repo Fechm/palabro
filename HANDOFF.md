@@ -56,9 +56,10 @@ No introduzcas nada de pago sin preguntar al usuario.
 - Los workflows de GitHub Actions nunca han corrido.
 
 ### Pendiente, en orden de prioridad
-1. **Generar y sembrar el corpus** — desbloquea todo lo demás. La lista ya está
-   corregida (trampa 14); falta que Gemini responda: el 2026-09-23 todos los modelos
-   Flash devolvían 503 en el free tier.
+1. **Completar el corpus.** Estado al 2026-09-23: **1.417 palabras sembradas** en
+   Supabase (rangos 1–1418, ~84% de cobertura estimada, 7.085 frases), generadas con
+   Claude (Gemini estaba caído) en lotes de 50 + un revisor adversarial por lote.
+   Faltan ~1.380 palabras. Ver «Cómo retomar el corpus» más abajo.
 2. **Probar el loop completo** con un usuario real. Aquí van a salir cosas.
 3. **Desplegar** a Cloudflare Workers.
 4. Nivel 5 (audio): Whisper en Workers AI para la parte oral.
@@ -76,6 +77,28 @@ No introduzcas nada de pago sin preguntar al usuario.
   → `public/companion/*.png` + `src/client/companion/manifest.json`. **Nunca editar los PNG a mano.**
 
 ---
+
+### Cómo retomar el corpus
+Todo lo necesario está en `corpus/ai-generation/`:
+- `INSTRUCCIONES.md` — reglas para el agente generador (las 11 del SYSTEM_PROMPT + A–H
+  aprendidas: sin formas irregulares ni posesivo en las frases, distractores que dejen la
+  frase **agramatical** —no solo con otro sentido— y basados en errores reales de
+  hispanohablantes, español neutro con tuteo, glosas coherentes con el falso amigo).
+- `REVISION.md` — instrucciones del revisor. En los lotes hechos cambió de 50 a 600
+  distractores por lote: la segunda pasada no es opcional.
+- `merge.py` — une `parts/pilot.jsonl` + `parts/rev-*.jsonl` en `corpus.jsonl`, asignando
+  `freq_rank` **por lema** desde `wordlist.csv` (sobrevive a cambios de la lista).
+
+Pasos: (1) copiar `INSTRUCCIONES.md`/`REVISION.md` a `corpus/data/parts/`; (2) rearmar
+los lotes pendientes con las palabras de `wordlist.csv` que no están en ningún `rev-*.jsonl`
+(los `batch-030+` actuales son de una versión anterior de la lista); en `parts/` ya hay
+`gen-030…035` y `gen-037` sin revisar que siguen sirviendo si su lema sigue en la lista;
+(3) por lote: agente generador → `gen-XXX.jsonl`, agente revisor → `rev-XXX.jsonl`,
+ambos deben pasar `npx tsx corpus/validate.ts --in <archivo> --report-only` con 0/0;
+(4) al generar, los agentes avisan de nombres propios y artefactos que se cuelan:
+agregarlos a `PROPER_NOUNS`/`NOISE` en `build-wordlist.ts`; (5) `python corpus/ai-generation/merge.py --write`
+→ `npm run corpus:validate` → `npm run corpus:seed -- --remote` (idempotente).
+Límite práctico: 20 agentes en paralelo agotaron el plan en unas horas; usar ~5.
 
 ## 3. Arquitectura
 
@@ -273,6 +296,11 @@ FSRS son lógica de servidor.
 15. **429 de Gemini no siempre es la cuota diaria.** El cuerpo trae `PerDay` o
    `PerMinute` y un `retryDelay`; con el límite por minuto el generador espera y
    sigue. La API key va en el header `x-goog-api-key`, nunca en la URL.
+16. **Los subtítulos meten ruido que parece vocabulario:** nombres de personajes
+   (*john, tracy, clara*), acotaciones para sordos (*[grunting]*, *[bleep]*,
+   *ANNOUNCER:*), plurales que la lista de lemas reduce mal (*clothes → clothe*,
+   *data → datum*) y variantes británicas. Cada vez que cambia el final de la lista,
+   revisar las palabras nuevas: ahí es donde se cuelan.
 
 ---
 

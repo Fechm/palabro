@@ -23,7 +23,7 @@
 import { writeFileSync, existsSync, readFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseLemmaFile, pickLemma, preferForm } from "./lemmatize.js";
+import { isBritishVariant, isDuplicateForm, parseLemmaFile, pickLemma, preferForm } from "./lemmatize.js";
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), "data");
 const FREQ = join(DATA, "en_50k.txt");
@@ -36,6 +36,16 @@ const DICT_URL = "https://raw.githubusercontent.com/dwyl/english-words/master/wo
 const LEMMAS_URL = "https://raw.githubusercontent.com/michmech/lemmatization-lists/master/lemmatization-en.txt";
 
 const SHORT_OK = new Set(["go", "tv"]);
+
+const KEEP_FORMS = new Set([
+  "well","better","best","less","worst","further","lower","closer","elder","matter","thought",
+  "left","building","meeting","feeling","evening","beginning","painting","drawing","ending",
+  "landing","blessing","understanding","warning","opening","training","meaning","reading","writing",
+  "hearing","setting","broke","drunk","rose","wound","shot","bit","stranger","liver","recording",
+  "clothes","headquarters","politics","pants","data",
+  "married","scared","tired","interested","interesting","concerned","supposed","charming",
+  "freezing",
+]);
 
 const PROPER_NOUNS = new Set([
   "john","jesus","sam","michael","george","david","york","charlie","america","paul","mary","ben",
@@ -61,7 +71,12 @@ const PROPER_NOUNS = new Set([
   "harold","monica","diana","miami","owen","marshall","scotland","canada","han","von","marco","fbi",
   "cia","joan","herr","karl","shawn","natalie","nelson","korea","janet","harris","mia","raymond","sonny",
   "wendy","juan","riley","sydney","neil","gloria","shane","felix","moscow","logan","noah","evan","christine","mel",
-  "graham","ivan","lincoln","travis","leslie","brandon",
+  "graham","ivan","lincoln","travis","leslie","brandon","holmes","antonio","australia","mitch",
+  "diego","bonnie","leonard","elliot","jill","heather","dana","pierre","kang","adrian","donald","debbie",
+  "seth","gabriel","franklin","harper","carson","yang","sarge","benny","troy","chan",
+  "peter","tom","mike","joe","harry","bob","nick","leo","ted","hank","victor","julia","morgan","molly","mac","sally","vega","hong","jay","mason",
+  "holly","ken","miller","randy","mickey","caroline","walker","sandy","norman","willie","warren","colin","spencer","ford","ruby","lance","wade","khan","caesar","batman","superman","berlin","henry","jimmy","lee","billy",
+  "martin","bobby","anna","matt","lisa","laura","smith","china","madame","san","jenny","rick","tracy","rex","barney","dorothy","clara",
 ]);
 
 /** Interjecciones y muletillas: frecuentisimas en subtitulos, inutiles como tarjeta. */
@@ -75,6 +90,9 @@ const NOISE = new Set([
   "don","didn","doesn","isn","wasn","aren","weren","haven","hasn","hadn",
   "couldn","wouldn","shouldn","mustn","ain","ve","ll","re","em","til",
   "whoo","heh","gosh","jeez","blah","gimme","indistinct","thou","thy","mrs","indistinctly",
+  "laughing","screaming","grunting","cheering","shouting","yelling","groaning","panting",
+  "chuckling","gasping","growling","whispering","coughing","beeping","sighing","sobbing",
+  "barking","wailing","screeching","whirring","humming","chirping","chanting","honking","dammit","rumbling","sync","moaning","mar","monsieur","bleep","scoff","announcer",
 ]);
 
 /**
@@ -150,6 +168,7 @@ async function main() {
   }
 
   const accepted: string[] = [];
+  const preferred = new Set<string>();
   const acceptedSet = new Set<string>();
   const stats = { total: 0, noAlpha: 0, noise: 0, notInDict: 0, tooShort: 0, inflected: 0, lemmatized: 0 };
 
@@ -162,8 +181,9 @@ async function main() {
     if (excluded(word))                             { stats.noise++;  continue; }
     if (!dict.has(word))                            { stats.notInDict++; continue; }
 
-    const picked = pickLemma(word, lemmas, excluded);
+    const picked = KEEP_FORMS.has(word) ? word : pickLemma(word, lemmas, excluded);
     const lemma = picked && preferForm(word, picked, counts);
+    if (lemma === word && picked !== word) preferred.add(word);
     if (!lemma || excluded(lemma))                    { stats.noise++; continue; }
     if (lemma.length < 3 && !SHORT_OK.has(lemma))     { stats.tooShort++; continue; }
     if (!dict.has(lemma))                             { stats.notInDict++; continue; }
@@ -173,10 +193,13 @@ async function main() {
     accepted.push(lemma);
     acceptedSet.add(lemma);
     acceptedSet.add(word);
-    if (accepted.length >= skip + limit) break;
   }
 
-  const selected = accepted.slice(skip, skip + limit);
+  const candidates = new Set(accepted);
+  const keep = new Set([...KEEP_FORMS, ...preferred]);
+  const deduped = accepted.filter((w) => !isDuplicateForm(w, lemmas, candidates, keep, counts) && !isBritishVariant(w, candidates, counts));
+  stats.inflected += accepted.length - deduped.length;
+  const selected = deduped.slice(skip, skip + limit);
   const csv = ["freq_rank,lemma", ...selected.map((w, i) => `${i + 1},${w}`)].join("\n");
   writeFileSync(OUT, csv + "\n");
 

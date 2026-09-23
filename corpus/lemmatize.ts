@@ -28,9 +28,42 @@ export function pickLemma(
   return parents[0]!;
 }
 
-export const ADJECTIVE_RATIO = 1.5;
+export const ING_RATIO = 1.5;
+export const ED_RATIO = 2.5;
 
 export function preferForm(word: string, lemma: string, counts: ReadonlyMap<string, number>): string {
   if (lemma === word || !/(ing|ed)$/.test(word)) return lemma;
-  return (counts.get(word) ?? 0) >= ADJECTIVE_RATIO * (counts.get(lemma) ?? 0) ? word : lemma;
+  const ratio = word.endsWith("ed") ? ED_RATIO : ING_RATIO;
+  return (counts.get(word) ?? 0) >= ratio * (counts.get(lemma) ?? 0) ? word : lemma;
+}
+
+export function isDuplicateForm(
+  word: string,
+  index: LemmaIndex,
+  accepted: ReadonlySet<string>,
+  keep: ReadonlySet<string>,
+  counts: ReadonlyMap<string, number>,
+): boolean {
+  if (keep.has(word)) return false;
+  const own = counts.get(word) ?? 0;
+  return (index.formToLemmas.get(word) ?? [])
+    .some((p) => p !== word && accepted.has(p) && (counts.get(p) ?? 0) >= own);
+}
+
+const BRITISH_IRREGULAR: Record<string, string> = { grey: "gray", mum: "mom", mummy: "mommy" };
+
+export function isBritishVariant(
+  word: string,
+  candidates: ReadonlySet<string>,
+  counts?: ReadonlyMap<string, number>,
+): boolean {
+  const our = /our(ite|able|ed|ing|s)?$/.exec(word);
+  const options = [
+    BRITISH_IRREGULAR[word],
+    our ? `${word.slice(0, our.index)}or${our[1] ?? ""}` : undefined,
+    word.endsWith("ise") ? `${word.slice(0, -3)}ize` : undefined,
+    /[bt]re$/.test(word) ? `${word.slice(0, -2)}er` : undefined,
+  ];
+  const own = counts?.get(word) ?? 0;
+  return options.some((o) => o !== undefined && o !== word && candidates.has(o) && (counts?.get(o) ?? own) >= own);
 }
