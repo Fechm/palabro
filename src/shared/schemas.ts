@@ -77,6 +77,7 @@ export const studyCardSchema = z.object({
   is_new: z.boolean(),
   lexeme: lexemeSchema,
   context: contextSchema.nullable(),
+  next: z.object({ 1: z.number(), 2: z.number(), 3: z.number(), 4: z.number() }).optional(),
 });
 export type StudyCard = z.infer<typeof studyCardSchema>;
 

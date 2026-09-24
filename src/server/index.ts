@@ -8,6 +8,7 @@ import { explain } from "./routes/explain.js";
 import { progress } from "./routes/progress.js";
 import { game } from "./routes/game.js";
 import { account } from "./routes/account.js";
+import { settings } from "./routes/settings.js";
 import { scheduled as runCron } from "./scheduled.js";
 import { RpcError } from "./db.js";
 
@@ -26,6 +27,7 @@ app.route("/api/produce", produce);
 app.route("/api/explain", explain);
 app.route("/api/progress", progress);
 app.route("/api/game", game);
+app.route("/api/settings", settings);
 
 app.onError((err, c) => {
   console.error(err);

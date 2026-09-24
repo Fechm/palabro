@@ -65,6 +65,26 @@ test("la recuperación muestra la pregunta de seguridad de la cuenta", async ({ 
   await expect(page.getByLabel("Contraseña nueva", { exact: true })).toHaveAttribute("type", "password");
 });
 
+test("el registro envía las palabras nuevas por día elegidas", async ({ page }) => {
+  let body: Record<string, unknown> | null = null;
+  await page.route("**/api/auth/register", async (r) => {
+    body = r.request().postDataJSON();
+    await r.fulfill({ json: fakeTokens() });
+  });
+  await setup(page);
+  await page.getByRole("button", { name: "Crear cuenta" }).click();
+  await page.getByLabel("Código de invitación").fill("codigo");
+  await page.getByLabel("Nombre de usuario").fill("felipe");
+  await page.getByLabel("Correo").fill("f@x.cl");
+  await page.getByLabel("Contraseña", { exact: true }).fill("secreta-123");
+  await page.getByLabel("Repite la contraseña").fill("secreta-123");
+  await page.getByLabel("Respuesta").fill("Toby");
+  await expect(page.getByLabel("¿Cuántas palabras nuevas quieres por día?")).toHaveValue("20");
+  await page.getByLabel("¿Cuántas palabras nuevas quieres por día?").selectOption("10");
+  await page.getByRole("button", { name: "Crear cuenta" }).click();
+  await expect.poll(() => body?.new_per_day).toBe(10);
+});
+
 test("el registro valida que las contraseñas coincidan antes de enviar", async ({ page }) => {
   let called = false;
   await page.route("**/api/auth/register", (r) => { called = true; return r.fulfill({ json: fakeTokens() }); });

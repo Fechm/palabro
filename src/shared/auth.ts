@@ -21,6 +21,13 @@ export const passwordSchema = z.string().min(8, "Mínimo 8 caracteres").max(72);
 
 const answerSchema = z.string().trim().min(2).max(60);
 
+export const NEW_PER_DAY_OPTIONS = [5, 10, 20, 30] as const;
+
+export const newPerDaySchema = z
+  .number()
+  .int()
+  .refine((n) => (NEW_PER_DAY_OPTIONS as readonly number[]).includes(n));
+
 export const registerSchema = z.object({
   invite: z.string().trim().min(1),
   username: usernameSchema,
@@ -28,7 +35,10 @@ export const registerSchema = z.object({
   password: passwordSchema,
   question_id: z.number().int().refine((id) => questionIds.includes(id)),
   answer: answerSchema,
+  new_per_day: newPerDaySchema.default(20),
 });
+
+export const settingsSchema = z.object({ new_per_day: newPerDaySchema });
 
 export const loginSchema = z.object({
   identifier: z.string().trim().min(1).max(254),

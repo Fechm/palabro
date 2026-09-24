@@ -104,6 +104,8 @@ account.post("/register", async (c) => {
       : c.json({ error: "register_failed" }, 500);
   }
 
+  await db(c.env).from("user_stats").update({ new_per_day: input.new_per_day }).eq("user_id", userId);
+
   const tokens = await signIn(c.env, input.email, input.password);
   return tokens ? c.json(tokens) : c.json({ error: "register_failed" }, 500);
 });

@@ -1,3 +1,4 @@
+import { formatInterval } from "../../shared/interval.js";
 import { useState } from "react";
 import type { StudyCard, Verdict } from "../../shared/schemas.js";
 import { api } from "../lib/api.js";
@@ -108,7 +109,7 @@ export function ProductionCard({
             onClick={() => onGrade(verdict.grade)}
             className="w-full rounded-xl bg-indigo-500 py-4 font-semibold text-white transition hover:bg-indigo-600"
           >
-            Continuar
+            Continuar{card.next && <span className="font-normal opacity-80"> · vuelve {formatInterval(card.next[verdict.grade as 1 | 2 | 3 | 4])}</span>}
           </button>
         </div>
       )}

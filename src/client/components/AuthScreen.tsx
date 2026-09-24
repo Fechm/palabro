@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { SECURITY_QUESTIONS, passwordSchema, registerSchema } from "../../shared/auth.js";
+import { NEW_PER_DAY_OPTIONS, SECURITY_QUESTIONS, passwordSchema, registerSchema } from "../../shared/auth.js";
 import { authMessage, login, recoveryQuestion, register, resetPassword } from "../lib/auth.js";
 import { PasswordInput, inputClass } from "./PasswordInput.js";
 
@@ -70,11 +70,14 @@ function LoginForm({ go }: { go: (v: View) => void }) {
 
 function RegisterForm({ go }: { go: (v: View) => void }) {
   const [form, setForm] = useState({
-    invite: "", username: "", email: "", password: "", confirm: "", question_id: 1, answer: "",
+    invite: "", username: "", email: "", password: "", confirm: "", question_id: 1, answer: "", new_per_day: 20,
   });
   const { busy, error, setError, run } = useSubmit();
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
-    setForm((f) => ({ ...f, [key]: key === "question_id" ? Number(e.target.value) : e.target.value }));
+    setForm((f) => ({
+      ...f,
+      [key]: key === "question_id" || key === "new_per_day" ? Number(e.target.value) : e.target.value,
+    }));
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -109,6 +112,11 @@ function RegisterForm({ go }: { go: (v: View) => void }) {
       </Field>
       <Field label="Respuesta" hint="Elige algo que no aparezca en tus redes sociales.">
         <input value={form.answer} onChange={set("answer")} required autoComplete="off" className={inputClass} />
+      </Field>
+      <Field label="¿Cuántas palabras nuevas quieres por día?" hint="Puedes cambiarlo cuando quieras en Progreso.">
+        <select value={form.new_per_day} onChange={set("new_per_day")} className={inputClass}>
+          {NEW_PER_DAY_OPTIONS.map((n) => <option key={n} value={n}>{n} palabras</option>)}
+        </select>
       </Field>
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       <button type="submit" disabled={busy} className={buttonClass}>{busy ? "Creando…" : "Crear cuenta"}</button>

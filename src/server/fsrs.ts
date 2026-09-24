@@ -1,4 +1,4 @@
-import { fsrs, generatorParameters, type Card, type Grade, State } from "ts-fsrs";
+import { fsrs, generatorParameters, Rating, type Card, type Grade, State } from "ts-fsrs";
 
 /** Estado FSRS tal como viaja entre Postgres y el Worker. */
 export interface FsrsRow {
@@ -15,6 +15,7 @@ export interface FsrsRow {
 }
 
 const scheduler = fsrs(generatorParameters({ enable_fuzz: true }));
+const previewScheduler = fsrs(generatorParameters({ enable_fuzz: false }));
 
 function toCard(row: FsrsRow): Card {
   return {
@@ -50,6 +51,14 @@ function toRow(card: Card): FsrsRow {
 export function schedule(row: FsrsRow, grade: number, now = new Date()): FsrsRow {
   const { card } = scheduler.next(toCard(row), now, grade as Grade);
   return toRow(card);
+}
+
+export type NextIntervals = Record<1 | 2 | 3 | 4, number>;
+
+export function previewIntervals(row: FsrsRow, now = new Date()): NextIntervals {
+  const preview = previewScheduler.repeat(toCard(row), now);
+  const ms = (r: Grade) => Math.max(0, preview[r].card.due.getTime() - now.getTime());
+  return { 1: ms(Rating.Again), 2: ms(Rating.Hard), 3: ms(Rating.Good), 4: ms(Rating.Easy) };
 }
 
 /**

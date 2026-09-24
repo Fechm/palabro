@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { NEW_PER_DAY_OPTIONS } from "../../shared/auth.js";
 import { api } from "../lib/api.js";
 
 interface ProgressData {
@@ -54,6 +55,8 @@ export function Progress() {
         </div>
       </section>
 
+      <DailyNewWords />
+
       <div className="grid grid-cols-3 gap-3">
         <Stat label="Vistas" value={data.words_seen} />
         <Stat label="Racha" value={data.current_streak ?? 0} suffix="d" />
@@ -93,5 +96,47 @@ function Stat({ label, value, suffix }: { label: string; value: number; suffix?:
       <p className="text-2xl font-bold">{value}{suffix}</p>
       <p className="text-xs opacity-50">{label}</p>
     </div>
+  );
+}
+
+function DailyNewWords() {
+  const qc = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => api.get<{ new_per_day: number }>("/api/settings"),
+  });
+  const save = useMutation({
+    mutationFn: (n: number) => api.put<{ new_per_day: number }>("/api/settings", { new_per_day: n }),
+    onSuccess: (res) => {
+      qc.setQueryData(["settings"], res);
+      qc.invalidateQueries({ queryKey: ["session-today"] });
+    },
+  });
+  const current = save.variables ?? data?.new_per_day;
+
+  return (
+    <section className="rounded-2xl border border-black/10 p-4 dark:border-white/10">
+      <p className="mb-3 text-sm font-medium" id="new-per-day-label">Palabras nuevas por día</p>
+      <div role="radiogroup" aria-labelledby="new-per-day-label" className="grid grid-cols-4 gap-2">
+        {NEW_PER_DAY_OPTIONS.map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={current === n}
+            disabled={save.isPending}
+            onClick={() => save.mutate(n)}
+            className={`rounded-xl py-3 font-semibold transition ${
+              current === n ? "bg-indigo-500 text-white" : "bg-black/5 dark:bg-white/10"
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-xs opacity-60">
+        Los repasos pendientes se muestran siempre, aparte de este límite.
+      </p>
+    </section>
   );
 }

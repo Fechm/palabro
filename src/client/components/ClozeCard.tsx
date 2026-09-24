@@ -1,3 +1,4 @@
+import { formatInterval } from "../../shared/interval.js";
 import { useMemo, useState } from "react";
 import type { StudyCard } from "../../shared/schemas.js";
 import { LexemeHeader } from "./LexemeHeader.js";
@@ -88,7 +89,7 @@ export function ClozeCard({
             disabled={busy}
             className="w-full rounded-xl bg-indigo-500 py-4 font-semibold text-white transition hover:bg-indigo-600 disabled:opacity-40"
           >
-            Continuar
+            Continuar{card.next && <span className="font-normal opacity-80"> · vuelve {formatInterval(card.next[correct ? 3 : 1])}</span>}
           </button>
         </div>
       )}

@@ -43,6 +43,9 @@ export const useSession = create<SessionState>((set) => ({
   reset: () => set({ cards: [], index: 0, grades: [], levelUps: 0 }),
 }));
 
+export const shouldLoadSession = (state: { cards: readonly unknown[] }): boolean =>
+  state.cards.length === 0;
+
 export const selectCurrent = (s: SessionState): StudyCard | undefined => s.cards[s.index];
 export const selectDone = (s: SessionState): boolean =>
   s.cards.length > 0 && s.index >= s.cards.length;

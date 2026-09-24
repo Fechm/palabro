@@ -1,3 +1,5 @@
+import { formatInterval } from "../../shared/interval.js";
+
 /**
  * Escala FSRS. Los nombres en español importan: "Otra vez" comunica
  * mejor que "Again" que la tarjeta vuelve, no que fallaste.
@@ -10,8 +12,8 @@ const GRADES = [
 ] as const;
 
 export function GradeButtons({
-  onGrade, disabled,
-}: { onGrade: (g: number) => void; disabled?: boolean }) {
+  onGrade, disabled, next,
+}: { onGrade: (g: number) => void; disabled?: boolean; next?: Record<1 | 2 | 3 | 4, number> }) {
   return (
     <div className="grid grid-cols-4 gap-2">
       {GRADES.map(({ g, label, hint, cls }) => (
@@ -23,7 +25,7 @@ export function GradeButtons({
         >
           <span className="block text-sm font-semibold">{label}</span>
           <span className="block text-[11px] opacity-80">{hint}</span>
-          <span className="mt-1 block text-[10px] opacity-60">{g}</span>
+          {next && <span className="mt-1 block text-xs font-medium">{formatInterval(next[g])}</span>}
         </button>
       ))}
     </div>

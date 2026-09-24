@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api.js";
-import { useSession, selectCurrent, selectDone } from "../store/session.js";
+import { useSession, selectCurrent, selectDone, shouldLoadSession } from "../store/session.js";
 import { MASTERY } from "../../shared/mastery.js";
 import type { StudyCard } from "../../shared/schemas.js";
 import { RecognitionCard } from "../components/RecognitionCard.js";
@@ -31,7 +31,7 @@ export function Study() {
   });
 
   useEffect(() => {
-    if (!data) return;
+    if (!data || !shouldLoadSession(useSession.getState())) return;
     s.load(data.cards, data.warmup_count);
     emitCompanion({ type: "session_start" });
     // Solo al llegar los datos: recargar aquí reiniciaría la sesión en curso.
