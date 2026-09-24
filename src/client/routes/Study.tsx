@@ -69,11 +69,11 @@ export function Study() {
     <div className="mx-auto max-w-lg px-4 pt-6 pb-36 sm:pb-48">
       <Progressbar index={s.index} total={s.cards.length} warmup={inWarmup} />
       {current.mastery_level <= MASTERY.CLOZE_KNOWN - 1 ? (
-        <RecognitionCard card={current} onGrade={onGrade} busy={review.isPending} />
+        <RecognitionCard key={current.user_card_id} card={current} onGrade={onGrade} busy={review.isPending} />
       ) : current.mastery_level <= MASTERY.CLOZE_NEW ? (
-        <ClozeCard card={current} onGrade={onGrade} busy={review.isPending} />
+        <ClozeCard key={current.user_card_id} card={current} onGrade={onGrade} busy={review.isPending} />
       ) : (
-        <ProductionCard card={current} onGrade={onGrade} />
+        <ProductionCard key={current.user_card_id} card={current} onGrade={onGrade} />
       )}
     </div>
   );

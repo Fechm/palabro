@@ -52,7 +52,8 @@ No introduzcas nada de pago sin preguntar al usuario.
   genere y siembre el corpus, la app muestra "no tienes tarjetas pendientes".
 - La evaluación de producción (`/api/produce`) nunca se ha ejercitado
   extremo a extremo con un usuario autenticado real.
-- Nunca se ha desplegado a Cloudflare.
+- **Desplegado** en https://palabro.fch-manriquez.workers.dev (deploy manual:
+  `npm run build` + `npx wrangler deploy`; el workflow escucha `main` y el repo usa `master`).
 - Los workflows de GitHub Actions nunca han corrido.
 
 ### Pendiente, en orden de prioridad
@@ -239,6 +240,16 @@ mediría adherencia en vez de aprendizaje. Hay 2 congeladores al mes, que se
 gastan solos: perder una racha de 60 días por un viaje es la causa #1 de
 abandono.
 
+### 4.11 bis Login sin correos (2026-09-23)
+Usuario **o** correo + contraseña, registro con **código de invitación**
+(`INVITE_CODE`) y recuperación por **pregunta de seguridad**. Ningún flujo envía
+correos: el SMTP por defecto de Supabase solo entrega al equipo del proyecto. Los
+endpoints públicos `/api/auth/*` (routes/account.ts) crean la cuenta confirmada con la
+service_role y devuelven la sesión; el cliente hace `supabase.auth.setSession`. Se montan
+**antes** del middleware `auth`, porque en Hono el orden de registro manda. Respuesta
+de seguridad con PBKDF2 y límite de 5 fallos en 15 min (`auth_attempts`). Diseño:
+`docs/superpowers/specs/2026-09-23-login-usuario-contrasena-design.md`.
+
 ### 4.11 Quién habla con la base de datos
 - **Auth** → el front habla directo con Supabase (`lib/supabase.ts`). El SDK
   maneja magic link, sesión y refresco mejor de lo que lo haríamos nosotros.
@@ -314,7 +325,8 @@ las `VITE_*` y los scripts del corpus lo cargan con `--env-file-if-exists`.
 ```
 VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY     -> cliente (públicas)
 SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-GEMINI_API_KEY, GEMINI_MODEL (opcional)       -> Worker y corpus
+GEMINI_API_KEY, GEMINI_MODEL (opcional),
+INVITE_CODE                                   -> Worker y corpus
 ```
 En producción: `wrangler secret put <NOMBRE>`.
 La anon key es pública por diseño; lo que protege los datos es la RLS.

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase.js";
-import { Login } from "./components/Login.js";
+import { AuthScreen } from "./components/AuthScreen.js";
 import { Study } from "./routes/Study.js";
 import { Progress } from "./routes/Progress.js";
 import { Companion } from "./companion/Companion.js";
@@ -37,7 +37,7 @@ function App() {
   }, []);
 
   if (!ready) return null;
-  if (!session) return <Login />;
+  if (!session) return <AuthScreen />;
 
   return (
     <div className="min-h-full pb-20">

@@ -7,12 +7,15 @@ import { produce } from "./routes/produce.js";
 import { explain } from "./routes/explain.js";
 import { progress } from "./routes/progress.js";
 import { game } from "./routes/game.js";
+import { account } from "./routes/account.js";
 import { scheduled as runCron } from "./scheduled.js";
 import { RpcError } from "./db.js";
 
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
 app.get("/api/health", (c) => c.json({ ok: true, env: c.env.ENVIRONMENT }));
+
+app.route("/api/auth", account);
 
 // Todo lo demás bajo /api exige un JWT de Supabase válido.
 app.use("/api/*", auth);
