@@ -67,6 +67,7 @@ export const lexemeSchema = z.object({
   collocations: z.array(z.string()),
   common_errors: z.array(z.string()),
   audio_url: z.string().nullable().optional(),
+  meaning_distractors: z.array(z.string()).optional(),
 });
 
 // ═══ Sesion de estudio ════════════════════════════════════════════════

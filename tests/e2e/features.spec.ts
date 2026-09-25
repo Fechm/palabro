@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { clozeCard, played, setup } from "./helpers.js";
+import { clozeCard, played, recognitionCard, setup } from "./helpers.js";
 
 const four = [
   clozeCard(1, "know", "saber"),
@@ -192,4 +192,42 @@ test("Progreso permite cerrar sesión y vuelve a la pantalla de ingreso", async 
   await page.getByRole("button", { name: "Cerrar sesión" }).click();
   await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Progreso" })).toBeHidden();
+});
+
+test.describe("nivel 1 con opciones", () => {
+  const know = recognitionCard(1, "know", "saber; conocer", ["venir; llegar", "ir; irse", "decir, contar"]);
+
+  test("primero pide pensar, después muestra opciones y el acierto rápido vale Fácil", async ({ page }) => {
+    await page.clock.install();
+    const captured = await setup(page, { cards: [know] });
+    await page.goto("/");
+    await expect(page.getByText("Piensa qué significa antes de ver las opciones")).toBeVisible();
+    await expect(page.locator("[data-state]")).toHaveCount(0);
+    await page.clock.runFor(3_100);
+    await expect(page.locator("[data-state]")).toHaveCount(4);
+    await page.getByRole("button", { name: "saber; conocer" }).click();
+    await expect(page.getByRole("button", { name: "saber; conocer" })).toHaveAttribute("data-state", "right");
+    await page.getByRole("button", { name: /^Continuar · vuelve en ~4 días/ }).click();
+    await expect.poll(() => captured.reviews[0]?.grade).toBe(4);
+  });
+
+  test("elegir mal marca la correcta y guarda Otra vez", async ({ page }) => {
+    const captured = await setup(page, { cards: [know] });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Ver opciones" }).click();
+    await page.getByRole("button", { name: "ir; irse" }).click();
+    await expect(page.getByRole("button", { name: "ir; irse" })).toHaveAttribute("data-state", "wrong");
+    await expect(page.getByRole("button", { name: "saber; conocer" })).toHaveAttribute("data-state", "right");
+    await page.getByRole("button", { name: /^Continuar/ }).click();
+    await expect.poll(() => captured.reviews[0]?.grade).toBe(1);
+  });
+
+  test("No sé guarda Otra vez y muestra el significado", async ({ page }) => {
+    const captured = await setup(page, { cards: [know] });
+    await page.goto("/");
+    await page.getByRole("button", { name: "No sé" }).click();
+    await expect(page.getByText("La frase:")).toBeVisible();
+    await page.getByRole("button", { name: /^Continuar · vuelve en 1 min/ }).click();
+    await expect.poll(() => captured.reviews[0]?.grade).toBe(1);
+  });
 });

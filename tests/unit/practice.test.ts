@@ -4,6 +4,7 @@ import { buildCalendar, intensity, localToday } from "../../src/client/lib/calen
 import { dueLabel, filterWords, normalize } from "../../src/client/lib/vocab.js";
 import { safeTimeZone } from "../../src/shared/timezone.js";
 import { cardKind } from "../../src/shared/mastery.js";
+import { meaningOptions, recognitionGrade } from "../../src/client/lib/recognition.js";
 import type { VocabWord } from "../../src/shared/schemas.js";
 
 function seq(values: number[]) {
@@ -102,5 +103,40 @@ describe("zona horaria y tipo de tarjeta", () => {
 
   it("cardKind reparte los niveles", () => {
     expect([1, 2, 3, 4, 5].map(cardKind)).toEqual(["recognition", "cloze", "cloze", "production", "production"]);
+  });
+});
+
+describe("nivel 1 con opciones", () => {
+  const card = (id: number, definition_es: string, distractors?: string[]) => ({
+    user_card_id: id, mastery_level: 1, state: 0, reps: 0, is_new: true,
+    lexeme: {
+      id, lemma: `w${id}`, pos: "verb" as const, cefr: "A1" as const, ipa: null, definition_en: "", definition_es,
+      usage_note: null, false_friend: null, collocations: [], common_errors: [], meaning_distractors: distractors,
+    },
+    context: null,
+  });
+
+  it("la nota sale del acierto y del tiempo", () => {
+    expect(recognitionGrade(false, 1000)).toBe(1);
+    expect(recognitionGrade(true, 5000)).toBe(4);
+    expect(recognitionGrade(true, 12_000)).toBe(3);
+    expect(recognitionGrade(true, 45_000)).toBe(2);
+  });
+
+  it("usa las opciones del servidor y agrega la correcta", () => {
+    const opts = meaningOptions(card(1, "saber", ["ir", "venir", "decir"]), [], Math.random)!;
+    expect([...opts].sort()).toEqual(["decir", "ir", "saber", "venir"]);
+  });
+
+  it("completa con definiciones de la sesión sin repetir la correcta", () => {
+    const session = [card(2, "pensar"), card(3, "saber"), card(4, "querer"), card(5, "necesitar")];
+    const opts = meaningOptions(card(1, "saber", ["ir"]), session, Math.random)!;
+    expect(opts).toHaveLength(4);
+    expect(opts.filter((o) => o === "saber")).toHaveLength(1);
+    expect(opts).toContain("ir");
+  });
+
+  it("sin 3 alternativas vuelve a la tarjeta autocalificada", () => {
+    expect(meaningOptions(card(1, "saber"), [card(2, "pensar")], Math.random)).toBeNull();
   });
 });

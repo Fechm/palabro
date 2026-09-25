@@ -165,14 +165,14 @@ describe("react: saludo, tutorial y mitad", () => {
   it("en el tutorial se presenta como Palabro y suma la primera explicación", () => {
     const r = run([start(0, 5, true), shown("recognition", 0)])[1]!;
     expect(r.anim).toBe("point");
-    expect(lineText(r.line!)).toMatch(/^¡Hola! Soy Palabro.*Lee la frase/);
+    expect(lineText(r.line!)).toMatch(/^¡Hola! Soy Palabro.*piensa qué significa/);
   });
 
   it("el tutorial explica cada tipo de tarjeta una sola vez, apuntando", () => {
     const rs = run([start(0, 5, true), shown("recognition", 0), revealed(), shown("recognition", 1), revealed(), shown("cloze", 2), shown("production", 3)]);
     expect(rs.map((r) => r.line !== null)).toEqual([false, true, true, false, false, true, true]);
     expect(rs[5]!.anim).toBe("point");
-    expect(lineText(rs[2]!.line!)).toContain("Tu respuesta decide cuándo vuelve");
+    expect(lineText(rs[2]!.line!)).toContain("toca No sé");
   });
 
   it("sin tutorial no hay explicaciones", () => {
@@ -191,7 +191,7 @@ describe("react: pistas y tocar al perro", () => {
   it("significado: sugiere mostrar el significado", () => {
     const r = react({ type: "stuck", card: card(), kind: "recognition" }, FRESH_MEMORY, rng);
     expect(r.anim).toBe("idea");
-    expect(lineText(r.line!)).toContain("Mostrar significado");
+    expect(lineText(r.line!)).toContain("No sé");
   });
 
   it("hueco: da la primera letra de la respuesta", () => {

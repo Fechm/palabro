@@ -22,6 +22,11 @@ export function clozeCard(id: number, lemma: string, definition_es: string, extr
   };
 }
 
+export function recognitionCard(id: number, lemma: string, definition_es: string, distractors: string[]) {
+  const base = clozeCard(id, lemma, definition_es);
+  return { ...base, mastery_level: 1, lexeme: { ...base.lexeme, meaning_distractors: distractors } };
+}
+
 export interface Mocks {
   cards?: unknown[];
   settings?: { new_per_day: number; tutorial_done: boolean };
@@ -32,10 +37,11 @@ export interface Mocks {
 export interface Captured {
   settingsPuts: unknown[];
   gameResults: Record<string, unknown>[];
+  reviews: Record<string, unknown>[];
 }
 
 export async function setup(page: Page, mocks: Mocks = {}): Promise<Captured> {
-  const captured: Captured = { settingsPuts: [], gameResults: [] };
+  const captured: Captured = { settingsPuts: [], gameResults: [], reviews: [] };
   const now = Math.floor(Date.now() / 1000);
   await page.addInitScript(({ key, value }) => {
     localStorage.setItem(key, value);
@@ -56,8 +62,10 @@ export async function setup(page: Page, mocks: Mocks = {}): Promise<Captured> {
   await page.route(/supabase\.co/, (r) => r.fulfill({ json: {} }));
   await page.route("**/api/session/today", (r) =>
     r.fulfill({ json: { cards: mocks.cards ?? [], warmup_count: 0, deferred: 0 } }));
-  await page.route("**/api/review", (r) =>
-    r.fulfill({ json: { due: new Date().toISOString(), mastery_level: 2, leveled_up: false, leveled_down: false } }));
+  await page.route("**/api/review", (r) => {
+    captured.reviews.push(r.request().postDataJSON() as Record<string, unknown>);
+    return r.fulfill({ json: { due: new Date().toISOString(), mastery_level: 2, leveled_up: false, leveled_down: false } });
+  });
   await page.route("**/api/session/complete", (r) => r.fulfill({ json: { current_streak: 2 } }));
   await page.route("**/api/settings", (r) => {
     if (r.request().method() === "PUT") {

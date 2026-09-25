@@ -44,8 +44,8 @@ const FALLBACK_MISS: Line[] = [["Casi. Esta vuelve pronto."], ["Tranqui, la repa
 const HELLO: Line[] = [["¡Hola! ¿Estudiamos un rato?"], ["¡Guau! Aquí estoy."], ["¡Hola! Cuando quieras seguimos."]];
 
 const TUTORIAL: Record<TutorialStep, Line> = {
-  recognition: ["Lee la frase e intenta adivinar qué significa la palabra. Después toca ", { em: "Mostrar significado" }, "."],
-  reveal: ["Ahora dime si la sabías. Tu respuesta decide cuándo vuelve: sé honesto, nadie te ve."],
+  recognition: ["Lee la frase y piensa qué significa la palabra. En unos segundos te muestro opciones."],
+  reveal: ["Elige el significado. Si no la sabes, toca ", { em: "No sé" }, ": vuelve pronto y también así se aprende."],
   cloze: ["Elige la palabra que falta en la frase."],
   production: ["Escribe tu propia frase con la palabra. Te corrijo como un profe."],
 };
@@ -81,7 +81,7 @@ function missLine(card: StudyCard, kind: "recognition" | "cloze", rng: Rng): Lin
 
 function hint(card: StudyCard, kind: CardKind): Line {
   if (kind === "recognition") {
-    return ["Si no te sale, toca ", { em: "Mostrar significado" }, ": también así se aprende."];
+    return ["Si no te sale, toca ", { em: "No sé" }, ": también así se aprende."];
   }
   if (kind === "cloze" && card.context) {
     const answer = card.context.text.slice(card.context.cloze_start, card.context.cloze_end);
