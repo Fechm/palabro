@@ -184,3 +184,12 @@ test.describe("Mis palabras", () => {
     await expect(page.getByRole("button", { name: "Practicar escuchando" })).toBeDisabled();
   });
 });
+
+test("Progreso permite cerrar sesión y vuelve a la pantalla de ingreso", async ({ page }) => {
+  await setup(page, { progress });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Progreso" }).click();
+  await page.getByRole("button", { name: "Cerrar sesión" }).click();
+  await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Progreso" })).toBeHidden();
+});

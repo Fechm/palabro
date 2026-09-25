@@ -8,6 +8,9 @@ import { Study } from "./routes/Study.js";
 import { Progress } from "./routes/Progress.js";
 import { Words } from "./routes/Words.js";
 import { Companion } from "./companion/Companion.js";
+import { resetCompanion } from "./companion/store.js";
+import { useSession } from "./store/session.js";
+import { registerSW } from "virtual:pwa-register";
 import "./index.css";
 
 const qc = new QueryClient({
@@ -18,6 +21,13 @@ const qc = new QueryClient({
       refetchOnWindowFocus: false,
       retry: 1,
     },
+  },
+});
+
+registerSW({
+  immediate: true,
+  onRegisteredSW(_url, registration) {
+    if (registration) setInterval(() => void registration.update(), 60 * 60 * 1000);
   },
 });
 
@@ -33,7 +43,15 @@ function App() {
       setSession(data.session);
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      if (!s) {
+        qc.clear();
+        useSession.getState().reset();
+        resetCompanion();
+        setTab("study");
+      }
+    });
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -42,7 +60,7 @@ function App() {
 
   return (
     <div className="min-h-full pb-20">
-      {tab === "study" ? <Study /> : tab === "words" ? <Words /> : <Progress />}
+      {tab === "study" ? <Study /> : tab === "words" ? <Words /> : <Progress user={session.user.user_metadata?.name ?? session.user.email ?? ""} />}
       {tab === "study" && <Companion />}
 
       <nav className="fixed inset-x-0 bottom-0 border-t border-black/10 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-slate-900/90">

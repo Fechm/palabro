@@ -37,6 +37,6 @@ export const ANIMATIONS = Object.fromEntries(
   (Object.keys(TIMING) as AnimName[]).map((name) => {
     const frames = manifest.animations[name].frames;
     const { fps, loop } = TIMING[name];
-    return [name, { name, frames, fps, loop, durationMs: Math.round((frames / fps) * 1000), src: `/companion/${name}.png` }];
+    return [name, { name, frames, fps, loop, durationMs: Math.round((frames / fps) * 1000), src: `/companion/${name}.png?v=${manifest.version}` }];
   }),
 ) as Record<AnimName, Animation>;

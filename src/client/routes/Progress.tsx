@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { NEW_PER_DAY_OPTIONS, type Settings } from "../../shared/auth.js";
 import { api } from "../lib/api.js";
+import { supabase } from "../lib/supabase.js";
 import { buildCalendar, intensity, localToday } from "../lib/calendar.js";
 
 interface ProgressData {
@@ -41,7 +42,7 @@ const TZ = (() => {
   }
 })();
 
-export function Progress() {
+export function Progress({ user }: { user: string }) {
   const { data, isLoading } = useQuery({
     queryKey: ["progress"],
     queryFn: () => api.get<ProgressData>(`/api/progress?tz=${encodeURIComponent(TZ)}`),
@@ -112,6 +113,17 @@ export function Progress() {
           </ul>
         </section>
       )}
+
+      <section className="rounded-2xl border border-black/10 p-4 text-center dark:border-white/10">
+        {user && <p className="mb-3 text-sm opacity-60">Conectado como <strong>{user}</strong></p>}
+        <button
+          type="button"
+          onClick={() => void supabase.auth.signOut()}
+          className="w-full rounded-xl bg-black/5 py-3 font-semibold text-red-600 transition hover:bg-black/10 dark:bg-white/10 dark:text-red-400"
+        >
+          Cerrar sesión
+        </button>
+      </section>
 
       <p className="pb-4 text-center text-xs opacity-40">
         Voz de las palabras: <a href="https://elevenlabs.io" target="_blank" rel="noreferrer" className="underline">ElevenLabs</a>

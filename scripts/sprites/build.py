@@ -11,6 +11,7 @@ Requiere Pillow y numpy.
 """
 import argparse
 import base64
+import hashlib
 import json
 from pathlib import Path
 
@@ -182,7 +183,8 @@ def main():
             old.unlink()
     for name, strip in strips.items():
         Image.fromarray(strip).save(OUT_PNG / f"{name}.png", optimize=True)
-    manifest = {"frameWidth": size[0], "frameHeight": size[1],
+    digest = hashlib.sha1(b"".join(s.tobytes() for s in strips.values())).hexdigest()[:8]
+    manifest = {"version": digest, "frameWidth": size[0], "frameHeight": size[1],
                 "animations": {n: {"frames": s.shape[1] // size[0]} for n, s in strips.items()}}
     OUT_MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     if args.preview:

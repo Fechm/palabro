@@ -14,6 +14,7 @@ export default defineConfig({
     cloudflare(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: false,
       manifest: {
         name: "Palabro",
         short_name: "Palabro",
