@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
-import { ANIMATIONS, type AnimName } from "./animations.js";
+import { ANIMATIONS, FRAME_WIDTH, type AnimName } from "./animations.js";
+
+const BODY_WIDTH = 60;
 import { SpeechBubble } from "./SpeechBubble.js";
 import { Sprite } from "./Sprite.js";
 import { useCompanion } from "./store.js";
+import { selectCurrent, useSession } from "../store/session.js";
+import { speak } from "../lib/audio.js";
 
 const WIDE = "(min-width: 640px)";
 
@@ -30,21 +34,39 @@ function useMissing(): ReadonlySet<AnimName> {
 }
 
 export function Companion() {
-  const { anim, playId, line, lineId, dismiss } = useCompanion();
+  const { anim, playId, line, lineId, dismiss, emit } = useCompanion();
+  const current = useSession(selectCurrent);
   const scale = useScale();
   const missing = useMissing();
   if (missing.has("idle")) return null;
 
+  const poke = () => {
+    emit({ type: "poke", card: current ?? null });
+    if (current) speak(current.lexeme.lemma, current.lexeme.audio_url);
+  };
+
   return (
     <div
       data-testid="companion"
-      className="pointer-events-none fixed right-3 z-20 flex flex-col items-end gap-2"
-      style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }}
+      className="pointer-events-none fixed inset-x-0 z-20"
+      style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom))" }}
     >
-      <div role="status" aria-live="polite" className="flex justify-end">
-        {line && <SpeechBubble key={lineId} line={line} onDismiss={dismiss} />}
+      <div className="mx-auto flex max-w-lg items-end gap-1 px-3 pb-1">
+        <div role="status" aria-live="polite" className="flex min-w-0 flex-1 justify-end pb-3">
+          {line && <SpeechBubble key={lineId} line={line} onDismiss={dismiss} />}
+        </div>
+        <button
+          type="button"
+          onClick={poke}
+          aria-label={current ? `Palabro: escuchar «${current.lexeme.lemma}»` : "Palabro"}
+          className="pointer-events-auto flex shrink-0 justify-center rounded-2xl focus-visible:outline-2 focus-visible:outline-indigo-500"
+          style={{ width: BODY_WIDTH * scale }}
+        >
+          <span style={{ marginInline: (-(FRAME_WIDTH - BODY_WIDTH) / 2) * scale }}>
+            <Sprite key={playId} anim={missing.has(anim) ? "idle" : anim} scale={scale} />
+          </span>
+        </button>
       </div>
-      <Sprite key={playId} anim={missing.has(anim) ? "idle" : anim} scale={scale} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ANIMATIONS } from "../../src/client/companion/animations.js";
-import { bubbleMs, emitCompanion, resetCompanion, useCompanion } from "../../src/client/companion/store.js";
+import { emitCompanion, idleVariantDelay, resetCompanion, STUCK_MS, talkMs, useCompanion } from "../../src/client/companion/store.js";
 import type { StudyCard } from "../../src/shared/schemas.js";
 
 const card: StudyCard = {
@@ -14,6 +14,8 @@ const card: StudyCard = {
 };
 const st = () => useCompanion.getState();
 const hit = () => emitCompanion({ type: "answer", card, correct: true, kind: "cloze" });
+const shown = () => emitCompanion({ type: "card_shown", card, kind: "cloze", index: 1, total: 4 });
+const start = () => emitCompanion({ type: "session_start", reviews: 2, fresh: 1, tutorial: false });
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -24,7 +26,7 @@ afterEach(() => vi.useRealTimers());
 describe("companion store", () => {
   it("una animación de una vez vuelve a idle al terminar", () => {
     hit();
-    vi.advanceTimersByTime(10_000);
+    st().dismiss();
     hit();
     expect(st().anim).toBe("happy");
     expect(st().line).toBeNull();
@@ -32,13 +34,20 @@ describe("companion store", () => {
     expect(st().anim).toBe("idle");
   });
 
-  it("con frase abierta, al terminar la animación pasa a talk y luego a idle", () => {
+  it("con frase abierta, al terminar la animación pasa a talk y el globito se queda", () => {
     emitCompanion({ type: "leveled_up", card, level: 3 });
     vi.advanceTimersByTime(ANIMATIONS.celebrate.durationMs);
     expect(st().anim).toBe("talk");
-    vi.advanceTimersByTime(bubbleMs(st().line!));
-    expect(st().line).toBeNull();
+    vi.advanceTimersByTime(60_000);
+    expect(st().line).not.toBeNull();
+  });
+
+  it("habla solo el tiempo de lectura; después descansa con el globito abierto", () => {
+    emitCompanion({ type: "leveled_up", card, level: 3 });
+    const line = st().line!;
+    vi.advanceTimersByTime(talkMs(line) + 1);
     expect(st().anim).toBe("idle");
+    expect(st().line).toEqual(line);
   });
 
   it("un evento nuevo interrumpe al actual", () => {
@@ -51,7 +60,7 @@ describe("companion store", () => {
 
   it("card_shown justo después de leveled_up no borra la celebración", () => {
     emitCompanion({ type: "leveled_up", card, level: 3 });
-    emitCompanion({ type: "card_shown", card });
+    shown();
     expect(st().anim).toBe("celebrate");
     expect(st().line).not.toBeNull();
   });
@@ -67,19 +76,43 @@ describe("companion store", () => {
     expect(st().anim).toBe("idle");
   });
 
-  it("session_done no se cierra solo", () => {
+  it("session_start reemplaza el globito por el saludo y reinicia la memoria", () => {
     emitCompanion({ type: "session_done", correct: 3, total: 4, streak: 2 });
-    vi.advanceTimersByTime(60_000);
+    hit();
+    start();
+    expect(st().line).toBeNull();
+    shown();
+    expect(st().line).toEqual(["Hoy tienes 2 repasos y 1 palabra nueva. ¡Vamos!"]);
+    st().dismiss();
+    hit();
     expect(st().line).not.toBeNull();
   });
 
-  it("session_start cierra el globito y reinicia la memoria", () => {
-    emitCompanion({ type: "session_done", correct: 3, total: 4, streak: 2 });
-    hit();
-    emitCompanion({ type: "session_start" });
+  it("a los 30 s sin responder da una pista con la animación idea", () => {
+    shown();
+    vi.advanceTimersByTime(STUCK_MS - 1);
     expect(st().line).toBeNull();
-    hit();
+    vi.advanceTimersByTime(1);
+    expect(st().anim).toBe("idea");
     expect(st().line).not.toBeNull();
+  });
+
+  it("si respondes antes de los 30 s no hay pista", () => {
+    shown();
+    vi.advanceTimersByTime(10_000);
+    emitCompanion({ type: "answer", card, correct: true, kind: "cloze" });
+    st().dismiss();
+    vi.advanceTimersByTime(STUCK_MS);
+    expect(st().line).toBeNull();
+  });
+
+  it("en reposo, cada tanto bosteza o se rasca", () => {
+    hit();
+    st().dismiss();
+    vi.advanceTimersByTime(ANIMATIONS.happy.durationMs);
+    expect(st().anim).toBe("idle");
+    vi.advanceTimersByTime(idleVariantDelay(() => 0));
+    expect(["yawn", "scratch"]).toContain(st().anim);
   });
 
   it("thinking se mantiene hasta el veredicto", () => {
@@ -88,8 +121,4 @@ describe("companion store", () => {
     expect(st().anim).toBe("thinking");
   });
 
-  it("la duración del globito está acotada entre 2,5 y 9 segundos", () => {
-    expect(bubbleMs(["a"])).toBe(2545);
-    expect(bubbleMs(["x".repeat(1000)])).toBe(9000);
-  });
 });

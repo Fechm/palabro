@@ -38,7 +38,7 @@ export function RecognitionCard({
 
       {!revealed ? (
         <button
-          onClick={() => setRevealed(true)}
+          onClick={() => { setRevealed(true); emitCompanion({ type: "revealed", card }); }}
           className="w-full rounded-xl bg-indigo-500 py-4 font-semibold text-white transition hover:bg-indigo-600"
         >
           Mostrar significado

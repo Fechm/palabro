@@ -36,3 +36,11 @@ corpus/data/lemmatization-en.txt
 
 # Lotes intermedios de generación del corpus
 corpus/data/parts/
+
+# Tandas de texto/audio para ElevenLabs (intermedias)
+audio-chunks/
+
+__pycache__/
+
+# Audio de las palabras: se sube cuando esté completo
+public/audio/

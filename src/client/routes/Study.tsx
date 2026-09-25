@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api.js";
 import { useSession, selectCurrent, selectDone, shouldLoadSession } from "../store/session.js";
-import { MASTERY } from "../../shared/mastery.js";
+import { cardKind } from "../../shared/mastery.js";
 import type { StudyCard } from "../../shared/schemas.js";
+import type { Settings } from "../../shared/auth.js";
 import { RecognitionCard } from "../components/RecognitionCard.js";
 import { ClozeCard } from "../components/ClozeCard.js";
 import { ProductionCard } from "../components/ProductionCard.js";
+import { PracticeRound } from "../components/PracticeRound.js";
+import { SpeakButton } from "../components/SpeakButton.js";
 import { emitCompanion } from "../companion/store.js";
 
 interface SessionResponse {
@@ -30,16 +33,30 @@ export function Study() {
     staleTime: Infinity,
   });
 
-  useEffect(() => {
-    if (!data || !shouldLoadSession(useSession.getState())) return;
-    s.load(data.cards, data.warmup_count);
-    emitCompanion({ type: "session_start" });
-    // Solo al llegar los datos: recargar aquí reiniciaría la sesión en curso.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  const settings = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => api.get<Settings>("/api/settings"),
+    staleTime: Infinity,
+  });
 
   useEffect(() => {
-    if (current) emitCompanion({ type: "card_shown", card: current });
+    if (!data || settings.isLoading || !shouldLoadSession(useSession.getState())) return;
+    s.load(data.cards, data.warmup_count);
+    const fresh = data.cards.filter((c) => c.is_new).length;
+    emitCompanion({
+      type: "session_start",
+      reviews: data.cards.length - fresh,
+      fresh,
+      tutorial: settings.data ? !settings.data.tutorial_done : false,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, settings.isLoading]);
+
+  useEffect(() => {
+    if (current) {
+      const { index, cards } = useSession.getState();
+      emitCompanion({ type: "card_shown", card: current, kind: cardKind(current.mastery_level), index, total: cards.length });
+    }
   }, [current]);
 
   const review = useMutation({
@@ -57,20 +74,39 @@ export function Study() {
     },
   });
 
-  if (isLoading) return <Centered>Preparando tu sesión…</Centered>;
+  if (isLoading || settings.isLoading) return <Centered>Preparando tu sesión…</Centered>;
   if (error) return <Centered>No se pudo cargar la sesión. Recarga la página.</Centered>;
+  if (done && !s.quizDone && s.quiz.length > 0) {
+    return (
+      <PracticeRound
+        mode="session_quiz"
+        title="Mini test de la sesión"
+        choices={s.quiz}
+        idOf={(c) => c.lexeme.id}
+        prompt={(c) => (
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold">¿Qué significa <em>{c.lexeme.lemma}</em>?</h2>
+            <SpeakButton text={c.lexeme.lemma} audioUrl={c.lexeme.audio_url} label={`Escuchar «${c.lexeme.lemma}»`} />
+          </div>
+        )}
+        onDone={s.finishQuiz}
+        onSkip={s.finishQuiz}
+      />
+    );
+  }
   if (done) return <Summary onRestart={() => { s.reset(); qc.invalidateQueries({ queryKey: ["session-today"] }); }} />;
   if (!current) return <Centered>No tienes tarjetas pendientes. Vuelve mañana.</Centered>;
 
   const onGrade = (g: number) => review.mutate({ card: current, grade: g });
   const inWarmup = s.index < s.warmupCount;
+  const kind = cardKind(current.mastery_level);
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-6 pb-36 sm:pb-48">
+    <div className="mx-auto max-w-lg px-4 pt-6 pb-56">
       <Progressbar index={s.index} total={s.cards.length} warmup={inWarmup} />
-      {current.mastery_level <= MASTERY.CLOZE_KNOWN - 1 ? (
+      {kind === "recognition" ? (
         <RecognitionCard key={current.user_card_id} card={current} onGrade={onGrade} busy={review.isPending} />
-      ) : current.mastery_level <= MASTERY.CLOZE_NEW ? (
+      ) : kind === "cloze" ? (
         <ClozeCard key={current.user_card_id} card={current} onGrade={onGrade} busy={review.isPending} />
       ) : (
         <ProductionCard key={current.user_card_id} card={current} onGrade={onGrade} />
@@ -97,6 +133,7 @@ function Progressbar({ index, total, warmup }: { index: number; total: number; w
 }
 
 function Summary({ onRestart }: { onRestart: () => void }) {
+  const qc = useQueryClient();
   const { grades, levelUps, startedAt } = useSession();
   const [streak, setStreak] = useState<number | null>(null);
   const minutos = Math.max(1, Math.round((Date.now() - startedAt) / 60_000));
@@ -105,6 +142,12 @@ function Summary({ onRestart }: { onRestart: () => void }) {
   useEffect(() => {
     // Solo completar la sesión mueve la racha. Los minijuegos no.
     const total = grades.length;
+    const current = qc.getQueryData<Settings>(["settings"]);
+    if (current && !current.tutorial_done) {
+      api.put<Settings>("/api/settings", { tutorial_done: true })
+        .then((r) => qc.setQueryData(["settings"], r))
+        .catch(() => undefined);
+    }
     api.post<{ current_streak: number }>("/api/session/complete", {})
       .then((r) => {
         setStreak(r.current_streak);
@@ -118,7 +161,7 @@ function Summary({ onRestart }: { onRestart: () => void }) {
   }, []);
 
   return (
-    <div className="mx-auto max-w-lg px-4 pt-10 pb-48 text-center">
+    <div className="mx-auto max-w-lg px-4 pt-10 pb-56 text-center">
       <h2 className="mb-2 text-3xl font-bold">Sesión completa</h2>
       <p className="mb-8 opacity-60">
         {aciertos} de {grades.length} bien · {minutos} min

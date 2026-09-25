@@ -6,6 +6,7 @@ import { supabase } from "./lib/supabase.js";
 import { AuthScreen } from "./components/AuthScreen.js";
 import { Study } from "./routes/Study.js";
 import { Progress } from "./routes/Progress.js";
+import { Words } from "./routes/Words.js";
 import { Companion } from "./companion/Companion.js";
 import "./index.css";
 
@@ -20,7 +21,7 @@ const qc = new QueryClient({
   },
 });
 
-type Tab = "study" | "progress";
+type Tab = "study" | "words" | "progress";
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -41,12 +42,13 @@ function App() {
 
   return (
     <div className="min-h-full pb-20">
-      {tab === "study" ? <Study /> : <Progress />}
+      {tab === "study" ? <Study /> : tab === "words" ? <Words /> : <Progress />}
       {tab === "study" && <Companion />}
 
       <nav className="fixed inset-x-0 bottom-0 border-t border-black/10 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-slate-900/90">
         <div className="mx-auto flex max-w-lg">
           <TabButton active={tab === "study"} onClick={() => setTab("study")}>Estudiar</TabButton>
+          <TabButton active={tab === "words"} onClick={() => setTab("words")}>Palabras</TabButton>
           <TabButton active={tab === "progress"} onClick={() => setTab("progress")}>Progreso</TabButton>
         </div>
       </nav>

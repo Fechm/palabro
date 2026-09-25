@@ -1,6 +1,8 @@
 import manifest from "./manifest.json";
 
-export type AnimName = "idle" | "talk" | "happy" | "oops" | "thinking" | "celebrate" | "wow" | "wave";
+export type AnimName =
+  | "idle" | "talk" | "happy" | "oops" | "thinking" | "celebrate" | "wow" | "wave"
+  | "yawn" | "scratch" | "point" | "idea";
 
 const TIMING: Record<AnimName, { fps: number; loop: boolean }> = {
   idle: { fps: 6, loop: true },
@@ -11,7 +13,13 @@ const TIMING: Record<AnimName, { fps: number; loop: boolean }> = {
   celebrate: { fps: 8, loop: false },
   wow: { fps: 6, loop: false },
   wave: { fps: 7, loop: false },
+  yawn: { fps: 4, loop: false },
+  scratch: { fps: 7, loop: false },
+  point: { fps: 5, loop: false },
+  idea: { fps: 5, loop: false },
 };
+
+export const IDLE_VARIANTS: readonly AnimName[] = ["yawn", "scratch"];
 
 export interface Animation {
   name: AnimName;
@@ -22,7 +30,8 @@ export interface Animation {
   src: string;
 }
 
-export const FRAME_SIZE: number = manifest.frameSize;
+export const FRAME_WIDTH: number = manifest.frameWidth;
+export const FRAME_HEIGHT: number = manifest.frameHeight;
 
 export const ANIMATIONS = Object.fromEntries(
   (Object.keys(TIMING) as AnimName[]).map((name) => {

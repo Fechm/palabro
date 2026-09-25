@@ -14,6 +14,12 @@ El contenido generado a partir de esa lista (definiciones, frases de ejemplo,
 notas de uso) es obra derivada y **hereda la licencia CC BY-SA**. Si
 redistribuyes el corpus, mantén esta atribución y la misma licencia.
 
+## Voz de las palabras
+
+La pronunciación de cada palabra (`public/audio/words/`) se generó con
+[ElevenLabs](https://elevenlabs.io), voz «Adam - American, Dark and Tough».
+El plan gratuito exige atribución: se muestra al pie de la pantalla Progreso.
+
 ## Dependencias principales
 
 | Proyecto | Licencia |

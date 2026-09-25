@@ -9,7 +9,7 @@ export function LexemeHeader({ card }: { card: StudyCard }) {
     <div className="mb-4">
       <div className="flex items-center gap-3">
         <h2 className="text-3xl font-bold">{lexeme.lemma}</h2>
-        <SpeakButton text={lexeme.lemma} label={`Escuchar «${lexeme.lemma}»`} />
+        <SpeakButton text={lexeme.lemma} audioUrl={lexeme.audio_url} label={`Escuchar «${lexeme.lemma}»`} />
         <span className="ml-auto rounded-full bg-black/5 px-2 py-0.5 text-xs dark:bg-white/10">
           {lexeme.cefr}
         </span>

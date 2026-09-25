@@ -1,15 +1,16 @@
 import type { CSSProperties } from "react";
-import { ANIMATIONS, FRAME_SIZE, type AnimName } from "./animations.js";
+import { ANIMATIONS, FRAME_HEIGHT, FRAME_WIDTH, type AnimName } from "./animations.js";
 
 export function Sprite({ anim, scale }: { anim: AnimName; scale: number }) {
   const a = ANIMATIONS[anim];
-  const size = Math.round(FRAME_SIZE * scale);
+  const width = Math.round(FRAME_WIDTH * scale);
+  const height = Math.round(FRAME_HEIGHT * scale);
   const style = {
-    width: size,
-    height: size,
+    width,
+    height,
     backgroundImage: `url(${a.src})`,
-    backgroundSize: `${a.frames * size}px ${size}px`,
-    "--companion-end": `${-(a.frames - 1) * size}px`,
+    backgroundSize: `${a.frames * width}px ${height}px`,
+    "--companion-end": `${-(a.frames - 1) * width}px`,
     animation: a.frames > 1
       ? `companion-play ${a.durationMs}ms steps(${a.frames}, jump-none) ${a.loop ? "infinite" : "1 forwards"}`
       : "none",

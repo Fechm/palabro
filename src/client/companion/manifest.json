@@ -1,5 +1,6 @@
 {
-  "frameSize": 71,
+  "frameWidth": 92,
+  "frameHeight": 60,
   "animations": {
     "idle": {
       "frames": 4
@@ -11,18 +12,30 @@
       "frames": 4
     },
     "oops": {
-      "frames": 4
+      "frames": 5
     },
     "thinking": {
       "frames": 4
     },
     "celebrate": {
-      "frames": 5
+      "frames": 6
     },
     "wow": {
-      "frames": 4
+      "frames": 6
     },
     "wave": {
+      "frames": 6
+    },
+    "yawn": {
+      "frames": 5
+    },
+    "scratch": {
+      "frames": 5
+    },
+    "point": {
+      "frames": 4
+    },
+    "idea": {
       "frames": 5
     }
   }

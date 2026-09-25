@@ -38,7 +38,14 @@ export const registerSchema = z.object({
   new_per_day: newPerDaySchema.default(20),
 });
 
-export const settingsSchema = z.object({ new_per_day: newPerDaySchema });
+export const settingsSchema = z
+  .object({ new_per_day: newPerDaySchema.optional(), tutorial_done: z.literal(true).optional() })
+  .refine((v) => v.new_per_day !== undefined || v.tutorial_done !== undefined);
+
+export interface Settings {
+  new_per_day: number;
+  tutorial_done: boolean;
+}
 
 export const loginSchema = z.object({
   identifier: z.string().trim().min(1).max(254),

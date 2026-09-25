@@ -16,6 +16,14 @@ export const MASTERY = {
   SPEAKING: 5,    // escuchas y respondes hablando
 } as const;
 
+export type CardKind = "recognition" | "cloze" | "production";
+
+export function cardKind(level: number): CardKind {
+  if (level < MASTERY.CLOZE_KNOWN) return "recognition";
+  if (level <= MASTERY.CLOZE_NEW) return "cloze";
+  return "production";
+}
+
 /** Niveles que cuestan esfuerzo real; se limitan por sesion. */
 export const EFFORTFUL_LEVELS = [MASTERY.PRODUCTION, MASTERY.SPEAKING];
 

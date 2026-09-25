@@ -38,7 +38,7 @@ async function setup(page: Page) {
   await page.route("**/api/session/today", (r) => r.fulfill({ json: { cards, warmup_count: 0, deferred: 0 } }));
   await page.route("**/api/review", (r) =>
     r.fulfill({ json: { due: new Date().toISOString(), mastery_level: 1, leveled_up: false, leveled_down: false } }));
-  await page.route("**/api/progress", (r) => r.fulfill({
+  await page.route("**/api/progress*", (r) => r.fulfill({
     json: { words_seen: 1, words_usable: 0, coverage_pct: 0, due_now: 1, current_streak: 0, longest_streak: 0, freezes_left: 2, top_errors: [] },
   }));
   await page.goto("/");

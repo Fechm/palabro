@@ -28,6 +28,7 @@ export const ERROR_TAGS = [
 export const GAME_MODES = [
   "speed_round", "native_or_not", "false_friend_hunt",
   "sentence_builder", "collocation_chain", "duel",
+  "session_quiz", "listening",
 ] as const;
 
 /** Escala FSRS: 1 Again · 2 Hard · 3 Good · 4 Easy */
@@ -65,6 +66,7 @@ export const lexemeSchema = z.object({
   false_friend: falseFriendSchema.nullable(),
   collocations: z.array(z.string()),
   common_errors: z.array(z.string()),
+  audio_url: z.string().nullable().optional(),
 });
 
 // ═══ Sesion de estudio ════════════════════════════════════════════════
@@ -141,6 +143,9 @@ export const explainResponseSchema = z.object({
 
 export const progressSchema = z.object({
   words_seen: z.number().int(),
+  due_tomorrow: z.number().int(),
+  levels: z.record(z.string(), z.number().int()),
+  study_days: z.array(z.object({ day: z.string(), n: z.number().int() })),
   words_usable: z.number().int(),
   /** Cobertura REAL del ingles conversacional, no puntos inventados. */
   coverage_pct: z.number(),
@@ -150,6 +155,20 @@ export const progressSchema = z.object({
   freezes_left: z.number().int().nullable(),
   top_errors: z.array(z.object({ tag: z.string(), n: z.number().int() })),
 });
+
+export const vocabWordSchema = z.object({
+  lexeme_id: z.number().int(),
+  lemma: z.string(),
+  pos: z.enum(POS),
+  cefr: z.enum(CEFR),
+  definition_es: z.string(),
+  audio_url: z.string().nullable(),
+  mastery_level: masterySchema,
+  due: z.string(),
+  example: z.string().nullable(),
+  example_es: z.string().nullable(),
+});
+export type VocabWord = z.infer<typeof vocabWordSchema>;
 
 export const gameResultSchema = z.object({
   mode: z.enum(GAME_MODES),

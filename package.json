@@ -20,6 +20,8 @@
     "corpus:generate": "tsx --env-file-if-exists=.env corpus/generate.ts",
     "corpus:validate": "tsx --env-file-if-exists=.env corpus/validate.ts",
     "corpus:seed": "tsx --env-file-if-exists=.env corpus/seed.ts",
+    "audio:words": "tsx --env-file-if-exists=.env scripts/audio/words.ts",
+    "audio:sync": "tsx --env-file-if-exists=.env scripts/audio/sync.ts",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > src/shared/database.types.ts",

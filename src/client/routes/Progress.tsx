@@ -1,12 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { NEW_PER_DAY_OPTIONS } from "../../shared/auth.js";
+import { NEW_PER_DAY_OPTIONS, type Settings } from "../../shared/auth.js";
 import { api } from "../lib/api.js";
+import { buildCalendar, intensity, localToday } from "../lib/calendar.js";
 
 interface ProgressData {
   words_seen: number;
   words_usable: number;
   coverage_pct: number | string;
   due_now: number;
+  due_tomorrow?: number;
+  levels?: Record<string, number>;
+  study_days?: { day: string; n: number }[];
   current_streak: number | null;
   longest_streak: number | null;
   freezes_left: number | null;
@@ -21,10 +25,26 @@ const ETIQUETAS: Record<string, string> = {
   spelling: "Ortografía", meaning: "Significado",
 };
 
+export const LEVELS = [
+  { level: 1, name: "Reconocer", what: "adivinas el significado en una frase" },
+  { level: 2, name: "Completar", what: "completas el hueco en la frase que ya viste" },
+  { level: 3, name: "Transferir", what: "completas el hueco en una frase nueva" },
+  { level: 4, name: "Usar", what: "escribes tu propia oración" },
+  { level: 5, name: "Hablar", what: "respondes hablando" },
+] as const;
+
+const TZ = (() => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Santiago";
+  } catch {
+    return "America/Santiago";
+  }
+})();
+
 export function Progress() {
   const { data, isLoading } = useQuery({
     queryKey: ["progress"],
-    queryFn: () => api.get<ProgressData>("/api/progress"),
+    queryFn: () => api.get<ProgressData>(`/api/progress?tz=${encodeURIComponent(TZ)}`),
   });
 
   if (isLoading || !data) {
@@ -35,12 +55,6 @@ export function Progress() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
-      {/*
-        La métrica principal NO son puntos inventados: es la cobertura real
-        del inglés conversacional, sumando el aporte por frecuencia de cada
-        palabra que el usuario ya puede USAR. Ver subir ese número motiva
-        porque significa algo.
-      */}
       <section className="rounded-3xl bg-indigo-500 p-6 text-white">
         <p className="text-sm opacity-80">Cobertura del inglés conversacional</p>
         <p className="my-1 text-5xl font-bold">{cobertura.toFixed(1)}%</p>
@@ -53,20 +67,32 @@ export function Progress() {
             style={{ width: `${Math.min(100, cobertura)}%` }}
           />
         </div>
+        <p className="mt-4 text-xs leading-relaxed opacity-80">
+          Una palabra cuenta cuando llega al nivel 4, es decir, cuando ya puedes escribir una
+          oración con ella. Cada palabra suma según cuánto se usa en conversaciones reales.
+        </p>
       </section>
+
+      <LevelLadder levels={data.levels ?? {}} />
+
+      <div className="grid grid-cols-2 gap-3">
+        <Stat label="Pendientes ahora" value={data.due_now} />
+        <Stat label="Te tocan mañana" value={data.due_tomorrow ?? 0} />
+      </div>
+
+      <StudyCalendar days={data.study_days ?? []} />
 
       <DailyNewWords />
 
-      <div className="grid grid-cols-3 gap-3">
-        <Stat label="Vistas" value={data.words_seen} />
-        <Stat label="Racha" value={data.current_streak ?? 0} suffix="d" />
-        <Stat label="Pendientes" value={data.due_now} />
+      <div className="grid grid-cols-2 gap-3">
+        <Stat label="Palabras vistas" value={data.words_seen} />
+        <Stat label="Racha" value={data.current_streak ?? 0} suffix=" d" />
       </div>
 
       {data.freezes_left !== null && (
         <p className="text-center text-xs opacity-50">
           Te quedan {data.freezes_left} congeladores de racha este mes ·
-          récord: {data.longest_streak ?? 0} días
+          récord: {data.longest_streak ?? 0} día{data.longest_streak === 1 ? "" : "s"}
         </p>
       )}
 
@@ -86,7 +112,75 @@ export function Progress() {
           </ul>
         </section>
       )}
+
+      <p className="pb-4 text-center text-xs opacity-40">
+        Voz de las palabras: <a href="https://elevenlabs.io" target="_blank" rel="noreferrer" className="underline">ElevenLabs</a>
+      </p>
     </div>
+  );
+}
+
+function LevelLadder({ levels }: { levels: Record<string, number> }) {
+  const counts = LEVELS.map((l) => levels[String(l.level)] ?? 0);
+  const max = Math.max(1, ...counts);
+  return (
+    <section aria-labelledby="ladder-title" className="rounded-2xl bg-white p-4 dark:bg-white/5">
+      <h3 id="ladder-title" className="font-semibold">Tus palabras por nivel</h3>
+      <p className="mb-4 text-xs opacity-60">
+        Cada palabra sube un nivel con 2 aciertos seguidos y baja uno con «Otra vez».
+      </p>
+      <ol className="space-y-3">
+        {LEVELS.map((l, i) => (
+          <li key={l.level} data-testid={`level-${l.level}`}>
+            <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+              <span>
+                <strong>{l.level}. {l.name}</strong>
+                <span className="opacity-60"> · {l.what}</span>
+              </span>
+              <span className="font-semibold tabular-nums">{counts[i]}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-black/5 dark:bg-white/10">
+              <div
+                className={`h-full rounded-full ${l.level >= 4 ? "bg-emerald-500" : "bg-indigo-400"}`}
+                style={{ width: `${(counts[i]! / max) * 100}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
+const SHADES = ["bg-black/5 dark:bg-white/10", "bg-indigo-200 dark:bg-indigo-900", "bg-indigo-400 dark:bg-indigo-600", "bg-indigo-600 dark:bg-indigo-400"];
+
+function StudyCalendar({ days }: { days: { day: string; n: number }[] }) {
+  const weeks = buildCalendar(days, localToday(TZ));
+  const studied = days.filter((d) => d.n > 0).length;
+  return (
+    <section aria-labelledby="calendar-title" className="rounded-2xl bg-white p-4 dark:bg-white/5">
+      <div className="mb-3 flex items-baseline justify-between">
+        <h3 id="calendar-title" className="font-semibold">Días de estudio</h3>
+        <span className="text-xs opacity-60">{studied} en las últimas 5 semanas</span>
+      </div>
+      <div className="mx-auto grid max-w-[17rem] grid-cols-7 gap-1.5 text-center text-[10px] opacity-60">
+        {WEEKDAYS.map((d, i) => <span key={i}>{d}</span>)}
+      </div>
+      <div className="mx-auto mt-1.5 grid max-w-[17rem] grid-cols-7 gap-1.5">
+        {weeks.flat().map((c) => (
+          <span
+            key={c.day}
+            data-testid={`day-${c.day}`}
+            data-n={c.n}
+            title={c.future ? undefined : `${c.day}: ${c.n} repaso${c.n === 1 ? "" : "s"}`}
+            className={`aspect-square rounded-md ${c.future ? "opacity-0" : SHADES[intensity(c.n)]} ${
+              c.today ? "ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-900" : ""
+            }`}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -103,10 +197,10 @@ function DailyNewWords() {
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["settings"],
-    queryFn: () => api.get<{ new_per_day: number }>("/api/settings"),
+    queryFn: () => api.get<Settings>("/api/settings"),
   });
   const save = useMutation({
-    mutationFn: (n: number) => api.put<{ new_per_day: number }>("/api/settings", { new_per_day: n }),
+    mutationFn: (n: number) => api.put<Settings>("/api/settings", { new_per_day: n }),
     onSuccess: (res) => {
       qc.setQueryData(["settings"], res);
       qc.invalidateQueries({ queryKey: ["session-today"] });
